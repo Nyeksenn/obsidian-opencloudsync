@@ -46,10 +46,9 @@ pnpm test -t 'TUS'           # single test by name
 pnpm test:oc                 # live OpenCloud layer (needs the dev server below); exits 3 if it is not running
 ```
 
-Local OpenCloud dev server (rootless Podman, `compose.yml`): `podman-compose up -d`, plain HTTP on
-`http://localhost:8080` (login service off, so no web UI login). The plugin signs in as `admin` with an app token:
-`podman exec opencloud-dev opencloud auth-app create --user-name=admin --expiration=720h`. Testing the plugin in
-Obsidian and other details: `docs/local-opencloud.md`.
+Local OpenCloud dev server (rootless Podman, `compose.yml`): `podman-compose up -d`, web UI `https://localhost:8080`
+as **admin / admin**. Sync needs an app token, not the password:
+`podman exec opencloud-dev opencloud auth-app create --user-name=admin --expiration=720h`. Details: `docs/local-opencloud.md`.
 
 Upstream's live layers (`bash tests/docker/run.sh <b1|b2|b3|b4>`, Docker, see `tests/README.md`) target Nextcloud /
 plain WebDAV and are not part of the fork's gate; they matter only when an upstream merge touches shared helpers.
@@ -90,8 +89,7 @@ plain WebDAV and are not part of the fork's gate; they matter only when an upstr
   clause catalog (`tests/a-no-nextcloud/spec-coverage/clauses.ts`) stays untouched.
 - `tests/opencloud-live/` (`jest.opencloud.config.js`, run via `run.sh`) — client contract and two-device engine tests
   against the dev server. Reuses upstream's live `obsidian` mock and `FakeVault` from `tests/b1-nextcloud-headless/`.
-  Each run gets a fresh project space; against an `https://` `OC_URL` it trusts that server's certificate via
-  `NODE_EXTRA_CA_CERTS` (checks stay on).
+  Each run gets a fresh project space and trusts the server certificate via `NODE_EXTRA_CA_CERTS` (checks stay on).
 - Upstream's spec-driven rules still apply to upstream code: `docs/spec.md` clauses, `[SPEC:<id>]` tags, `clauses.ts`,
   `coverage.test.ts`, and `docsReferences.test.ts` (every `docs/spec.md §…` reference in a comment must exist).
 - `jest.config.js` skips upstream's `sliderLimits.test.ts` while its private `specs/` mockup is absent.
