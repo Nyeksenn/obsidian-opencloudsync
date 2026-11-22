@@ -116,23 +116,33 @@ pnpm build && pnpm lint && pnpm test && pnpm test:oc
 
 Rules that keep this cheap:
 
-1. Don't edit upstream-owned code: `src/sync/**`, `src/data/**`, `src/util/**` (except `hash.ts`),
-   `src/network/**`, `docs/spec.md`, `docs/plan.md`, and upstream's tests. Upstream's Nextcloud and plain-WebDAV clients
-   stay in the tree, never constructed, so upstream fixes to them still merge. They are still bundled into `main.js` (`WebDAVFactory` and the settings tab import them), which costs bundle size, not behaviour.
+1. Don't edit upstream-owned code: `src/sync/**`, `src/data/**`, `src/network/**`, `docs/spec.md`, `docs/plan.md`.
+   Upstream's Nextcloud and plain-WebDAV clients stay in the tree, never constructed, so upstream fixes to them still
+   merge. They are still bundled into `main.js` (`WebDAVFactory` and the settings tab import them), which costs bundle
+   size, not behaviour.
 2. Fork code lives in new files: `src/opencloud/**`, `tests/a-no-nextcloud/opencloud/**`, `tests/opencloud-live/**`.
-3. The few edits to shared files are marked `[opencloud-fork]`.
-4. `manifest.json` and `versions.json` are the fork's and resolve as "ours" via `.gitattributes` (needs
-   `git config merge.ours.driver true`). `package.json` is deliberately not on that list, so upstream's dependency
-   bumps still merge; expect a small conflict on its name/version/author lines.
-5. The fork's README is `.github/README.md` (GitHub shows it in preference to the root file) and its changelog is
-   `CHANGELOG.opencloud.md`. The root `README.md`, `README.ja.md`, `CHANGELOG.md` and `CHANGELOG.ja.md` stay
-   upstream's: upstream tests read the READMEs (settings-defaults table, certificate FAQ, subfolder/409 note).
-   Obsidian's community plugin browser reads the root `README.md`, so before a store submission that file must become
-   the fork's, and those upstream tests then need a fork-side answer.
+3. Edits to shared files are small and marked `[opencloud-fork]`: the wiring (`main.ts`, `SettingTab.ts`), the digest
+   switch (`util/hash.ts`), and user-visible strings, so nothing the user sees says "Nextcloud": status bar, ribbon,
+   notices, debug-log file name and header (`util/logPaths.ts`, `util/FileLogger.ts`), mass-delete reports
+   (`ui/breakerReport.ts`), the 409 hint (`types.ts`) and the default Secret Storage name of the token.
+4. Merge policy (`.gitattributes`, needs `git config merge.ours.driver true` once per clone). "Ours" keeps the fork's
+   file whenever both sides changed it, and **drops upstream's change to it silently**, so it is used only for files
+   whose content is the fork's own:
+   - `README.md`, `CHANGELOG.md`, `manifest.json`, `versions.json`;
+   - the upstream tests that only pin README text or labels the fork rewrote: `certTrustReadme`, `defaultsDoc`,
+     `syncRibbon`, `breakerReport`.
+   Upstream tests that mostly test other behaviour and only had a string fixture changed (`missingParentHint`,
+   `logPaths`, `logSelfSync`, `fixedConfig`, `hardExcludedFolders`, `appPasswordSecret`, `appPasswordLive`) merge
+   normally: an upstream change to those exact lines shows up as a small conflict, everything else in them merges and runs.
+   `package.json` merges normally too, so upstream's dependency bumps arrive; expect a conflict on name/version only.
+5. The README and CHANGELOG at the root are the fork's (the Japanese translations were removed). Upstream's README tests
+   still run against the fork's README: the certificate FAQ and the settings-defaults table are upstream's
+   requirements; the 409 note describes the fork's behaviour.
 6. `jest.config.js` skips `tests/a-no-nextcloud/ui/sliderLimits.test.ts` while upstream's private
    `specs/main/desktop/settings.html` is absent (it is gitignored upstream), so `pnpm test` can pass in this repo.
-7. User-visible strings inherited from upstream that still say "Nextcloud" and are pinned by upstream tests stay as
-   they are: the ribbon tooltip ("Sync with Nextcloud"), the debug-log header and the mass-delete report headings.
+7. Not changed on purpose: internal identifiers (`ObsidianNextcloudsync`, `NextcloudFeatures`, `isNextcloud`, …),
+   the `nc:` XML namespace, the legacy temp-file suffix, `docs/spec.md` / `docs/plan.md`, and upstream's Nextcloud
+   UI layers (`tests/b2-*`, `tests/b3-*`), which the fork does not run.
 
 Known gaps in upstream code noticed while building the fork (candidates to report upstream):
 

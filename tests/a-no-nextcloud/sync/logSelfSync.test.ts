@@ -5,14 +5,14 @@ import { DavSyncSettings } from '../../../src/types';
 import { isActiveOwnLog, debugLogPath } from '../../../src/util/logPaths';
 
 // Regression guard for "Destination file already exists!" on the plugin's own per-device debug log
-// (_logs/nextcloud-debug_<host>.txt). Obsidian's DataAdapter.rename throws that message locally when the destination
+// (_logs/opencloud-debug_<host>.txt). Obsidian's DataAdapter.rename throws that message locally when the destination
 // exists: while FileLogger appends to the log, a concurrent append re-creates `target` between atomicWrite's
 // remove(target) and rename(tmp,target). (docs/spec.md §9.1)
 
 const enc = new TextEncoder();
 const toBuf = (s: string): ArrayBuffer => enc.encode(s).buffer;
 const HOST = 'desktop-daidows';
-const LOG_PATH = '_logs/nextcloud-debug_desktop-daidows.txt';
+const LOG_PATH = '_logs/opencloud-debug_desktop-daidows.txt';
 const DEBUG_LOG = debugLogPath('_logs', HOST);
 
 // An in-memory DataAdapter: rename(from,to) THROWS "Destination file already exists!" when `to` exists, and a hook

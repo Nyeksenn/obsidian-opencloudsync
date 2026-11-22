@@ -31,7 +31,7 @@ export class FileLogger {
         await this.adapter.append(p, line);
       } else {
         await ensureParentFolder(this.adapter, p);
-        await this.adapter.write(p, `# Nextcloud Sync — diagnostic log\n\n${line}`);
+        await this.adapter.write(p, `# OpenCloud Sync — diagnostic log\n\n${line}`); // [opencloud-fork]
       }
     } catch (err) {
       // Do not rethrow; report through onWriteError instead.

@@ -287,10 +287,11 @@ function rowName(row: SettingGroupItem): string | undefined {
   return typeof name === 'string' ? name : undefined;
 }
 
+// "Nextcloud" → "OpenCloud", and the debug-log file name the fork renamed (src/util/logPaths.ts).
 function rewordNextcloud(row: SettingGroupItem): SettingGroupItem {
   const desc = (row as { desc?: unknown }).desc;
-  if (typeof desc !== 'string' || !desc.includes('Nextcloud')) return row;
-  return { ...row, desc: desc.replace(/Nextcloud/g, 'OpenCloud') };
+  if (typeof desc !== 'string' || !/Nextcloud|nextcloud-debug_/.test(desc)) return row;
+  return { ...row, desc: desc.replace(/Nextcloud/g, 'OpenCloud').replace(/nextcloud-debug_/g, 'opencloud-debug_') };
 }
 
 // One controller per settings tab, so the loaded space list survives the re-renders Obsidian does on every update().

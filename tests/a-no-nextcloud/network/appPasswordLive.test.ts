@@ -14,7 +14,7 @@ import { AppPasswordReader, CredentialsNotFoundError, DEFAULT_SETTINGS, DavSyncS
 const mockRequestUrl = requestUrl as unknown as jest.Mock;
 
 const MULTISTATUS = '<d:multistatus xmlns:d="DAV:"></d:multistatus>';
-const DEFAULT_SECRET_ID = 'obsidian-nextcloudsync-password';
+const DEFAULT_SECRET_ID = 'opencloud-sync-app-token';
 
 let secrets: Map<string, string>;
 let settings: DavSyncSettings;

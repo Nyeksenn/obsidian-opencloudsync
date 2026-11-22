@@ -12,22 +12,24 @@ every change; read "Fork rules" below before editing anything outside `src/openc
 - Fork specification, server behaviour, merge workflow: `docs/opencloud.md` (read this first).
 - Upstream's behavioural spec and design: `docs/spec.md`, `docs/plan.md`. They say "Nextcloud"; `docs/opencloud.md`
   says what differs.
-- User docs: `.github/README.md` (the fork's README; the root `README.md` is upstream's, pinned by upstream tests).
+- User docs: `README.md` and `CHANGELOG.md` (the fork's own; the Japanese translations were removed).
 
 ## Fork rules
 
-1. **Don't edit upstream-owned code**: `src/sync/**`, `src/data/**`, `src/network/**`, `src/util/**` (except
-   `hash.ts`), `src/ui/**`, `docs/spec.md`, `docs/plan.md`, root `README*.md` / `CHANGELOG*.md`, and every existing test
-   (`tests/a-no-nextcloud/**` outside `opencloud/`, `tests/b*`, `tests/docker/`). No renames, moves or reformatting.
+1. **Don't edit upstream-owned engine code**: `src/sync/**`, `src/data/**`, `src/network/**`, `docs/spec.md`,
+   `docs/plan.md`. No renames, moves or reformatting anywhere in upstream files.
 2. **Fork code lives in new files**: `src/opencloud/**`, `tests/a-no-nextcloud/opencloud/**`, `tests/opencloud-live/**`,
-   `docs/opencloud.md`, `.github/README.md`, `CHANGELOG.opencloud.md`.
-3. **Unavoidable edits to shared files are marked `[opencloud-fork]`** and kept to a few lines: `src/main.ts`,
-   `src/settings/SettingTab.ts`, `src/util/hash.ts`, `src/ui/StatusBarItem.ts`, `jest.config.js`, `.githooks/*`.
-   Check with `git diff 21f8902 --stat -- src` (21f8902 = upstream 1.0.18): the engine must show no changes.
+   `docs/opencloud.md`.
+3. **Edits to shared files are marked `[opencloud-fork]`** and kept to the changed lines: wiring (`src/main.ts`,
+   `src/settings/SettingTab.ts`), the digest switch (`src/util/hash.ts`), user-visible strings (`src/ui/*`,
+   `src/util/logPaths.ts`, `src/util/FileLogger.ts`, `src/types.ts`), and the string fixtures in upstream tests that pin
+   them. Check with `git diff 21f8902 --stat -- src/sync src/data src/network` (21f8902 = upstream 1.0.18): no changes.
 4. Prefer **wrapping over editing**: e.g. settings rows are built by upstream's `buildSettingDefinitions()` and then
    transformed by `src/opencloud/settingsGroup.ts`; `OpenCloudFactory` *extends* `WebDAVFactory`.
-5. Upstream tests pin some files and strings (settings rows and `DEFAULT_SETTINGS` keys, README sections, the ribbon
-   label). If a change would break one, find a fork-side way instead of editing the test.
+5. Upstream tests pin settings rows and `DEFAULT_SETTINGS` keys: keep using the wrapping in `settingsGroup.ts` and
+   `opencloud.json` rather than editing them. `.gitattributes` keeps "ours" for README.md, CHANGELOG.md, manifest.json,
+   versions.json and four README/label tests; that drops upstream's changes to those files silently, so add a file
+   there only if its content is entirely the fork's (docs/opencloud.md, "Upstream merge workflow").
 
 ## Commands
 
@@ -94,8 +96,8 @@ plain WebDAV and are not part of the fork's gate; they matter only when an upstr
 
 - **commit-msg**: no Japanese/CJK in commit messages.
 - **pre-commit**: secretlint on staged files; no CJK in staged files except `*.ja*`. (Upstream's author-email gate is removed.)
-- **pre-push**: lint, build, `.github/README.md` names the `manifest.json` version in a "What's new (x.y.z)" heading
-  and mentions `minAppVersion`; stable versions need `[x.y.z]` in `CHANGELOG.opencloud.md`; `pnpm test`; `pnpm test:oc`
+- **pre-push**: lint, build, `README.md` names the `manifest.json` version in a "What's new (x.y.z)" heading
+  and mentions `minAppVersion`; stable versions need `[x.y.z]` in `CHANGELOG.md`; `pnpm test`; `pnpm test:oc`
   (skipped with a notice when no dev server runs).
 
 Conventions:

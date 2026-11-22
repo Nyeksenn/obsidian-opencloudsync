@@ -499,9 +499,10 @@ export class RemoteListingUnreadableError extends NetworkError {
   }
 }
 // Shown after a MKCOL 409; conditional because a 409 can also be an ancestor another device just deleted (docs/spec.md §11.2).
+// [opencloud-fork] The fork creates the folder inside the space itself, so a 409 means the space or a parent was removed.
 export const MISSING_PARENT_HINT =
-  'a parent folder is missing on the server. If your Server URL ends with a subfolder, ' +
-  'create that folder in Nextcloud first (the plugin does not create it).';
+  'a parent folder is missing on the server. The plugin creates the folder inside the space itself, so the space ' +
+  'or a parent folder was probably removed meanwhile: press "Connect" in the settings and check the space.';
 /** The vault-folder MKCOL answered 409: its parent, usually the Server URL subfolder, is missing (docs/spec.md §11.2). */
 export class MissingParentFolderError extends NetworkError {
   constructor() {

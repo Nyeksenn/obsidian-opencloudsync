@@ -30,6 +30,6 @@ describe('[SPEC:DBG-2] fixed Debug identity: auto-derived device name + vault-ro
   it('[SPEC:DBG-2] the empty logsFolder default puts the log at the vault root', () => {
     expect(DEFAULT_SETTINGS.logsFolder).toBe('');
     const host = 'desktop-a1b2c3';
-    expect(debugLogPath(DEFAULT_SETTINGS.logsFolder, host)).toBe('nextcloud-debug_desktop-a1b2c3.txt');
+    expect(debugLogPath(DEFAULT_SETTINGS.logsFolder, host)).toBe('opencloud-debug_desktop-a1b2c3.txt');
   });
 });

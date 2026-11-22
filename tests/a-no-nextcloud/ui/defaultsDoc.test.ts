@@ -8,7 +8,8 @@ function readme(name: string): string {
 }
 
 describe('[SPEC:SC-005] README settings-defaults tables match the code', () => {
-  for (const file of ['README.md', 'README.ja.md']) {
+  // [opencloud-fork] README.md only: the Japanese README was removed.
+  for (const file of ['README.md']) {
     const text = readme(file);
 
     describe(file, () => {

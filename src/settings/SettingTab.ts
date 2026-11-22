@@ -18,7 +18,7 @@ import { openCloudSettingDefinitions } from '../opencloud/settingsTab'; // [open
 // back empty (obsidian.d.ts:6633), which minAppVersion 1.13.0 rules out.
 
 // Default secret ID in SecretStorage; users can pick another via "Link…".
-const DEFAULT_PASSWORD_SECRET_ID = 'obsidian-nextcloudsync-password';
+const DEFAULT_PASSWORD_SECRET_ID = 'opencloud-sync-app-token'; // [opencloud-fork]
 // localStorage key where older versions stored the password; read only for migration.
 const LEGACY_CREDENTIALS_KEY = 'obsidian-nextcloudsync-password';
 

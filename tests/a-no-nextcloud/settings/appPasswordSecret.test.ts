@@ -5,7 +5,7 @@ import { Setting, SecretComponent } from '../support/obsidian';
 import { NextcloudSyncSettingTab, loadAppPassword } from '../../../src/settings/SettingTab';
 import { DEFAULT_SETTINGS } from '../../../src/types';
 
-const DEFAULT_ID = 'obsidian-nextcloudsync-password';
+const DEFAULT_ID = 'opencloud-sync-app-token';
 
 function setup(stored = '') {
   const plugin = {

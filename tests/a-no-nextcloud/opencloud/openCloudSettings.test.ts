@@ -86,7 +86,7 @@ describe('withOpenCloudSettings over upstream rows', () => {
     const defs = build();
     expect(row(defs, 'Server compatibility')).toBeUndefined();
     const descs = groups(defs).flatMap((g) => g.items ?? []).map((r) => (r as { desc?: unknown }).desc).filter((d) => typeof d === 'string');
-    expect(descs.filter((d) => (d as string).includes('Nextcloud'))).toEqual([]);
+    expect(descs.filter((d) => /nextcloud/i.test(d as string))).toEqual([]);
   });
 
   it('keeps "Sync now" disabled until a space is chosen', () => {
