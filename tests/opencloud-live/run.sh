@@ -13,25 +13,29 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-OC_URL="${OC_URL:-https://localhost:8080}"
+OC_URL="${OC_URL:-http://localhost:8080}"
 OC_USER="${OC_USER:-admin}"
 CONTAINER="${OC_CONTAINER:-opencloud-dev}"
 
 command -v podman >/dev/null || { echo "test:oc: podman is not installed." >&2; exit 3; }
-command -v openssl >/dev/null || { echo "test:oc: openssl is not installed." >&2; exit 3; }
 if [ "$(curl -sk -o /dev/null -w '%{http_code}' "$OC_URL/status.php" || true)" != "200" ]; then
   echo "test:oc: no OpenCloud server answers at $OC_URL. Start it with: podman-compose up -d" >&2
   exit 3
 fi
 
-# The dev server's certificate is self-signed. Rather than switching certificate checks off, trust exactly the
-# certificate it serves now (for this run only): Node gets it via NODE_EXTRA_CA_CERTS, curl via --cacert.
+# compose.yml serves plain HTTP. Against an https:// server with a self-signed certificate (OC_URL=https://…), trust
+# exactly the certificate it serves now, for this run only, instead of switching certificate checks off.
 CERT_DIR="$(mktemp -d)"
-HOSTPORT="$(node -e 'const u=new URL(process.argv[1]);process.stdout.write(`${u.hostname}:${u.port||443}`)' "$OC_URL")"
-echo | openssl s_client -connect "$HOSTPORT" -servername "${HOSTPORT%%:*}" 2>/dev/null | openssl x509 > "$CERT_DIR/server.pem" \
-  || { echo "test:oc: could not read the server certificate from $HOSTPORT." >&2; exit 3; }
-export NODE_EXTRA_CA_CERTS="$CERT_DIR/server.pem"
-curl() { command curl --cacert "$CERT_DIR/server.pem" "$@"; }
+case "$OC_URL" in
+  https://*)
+    command -v openssl >/dev/null || { echo "test:oc: openssl is needed for an https:// server." >&2; exit 3; }
+    HOSTPORT="$(node -e 'const u=new URL(process.argv[1]);process.stdout.write(`${u.hostname}:${u.port||443}`)' "$OC_URL")"
+    echo | openssl s_client -connect "$HOSTPORT" -servername "${HOSTPORT%%:*}" 2>/dev/null | openssl x509 > "$CERT_DIR/server.pem" \
+      || { echo "test:oc: could not read the server certificate from $HOSTPORT." >&2; exit 3; }
+    export NODE_EXTRA_CA_CERTS="$CERT_DIR/server.pem"
+    curl() { command curl --cacert "$CERT_DIR/server.pem" "$@"; }
+    ;;
+esac
 
 OC_TOKEN="$(podman exec "$CONTAINER" opencloud auth-app create --user-name="$OC_USER" --expiration=2h 2>/dev/null \
   | sed -n 's/^ *token: //p')"

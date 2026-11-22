@@ -8,5 +8,5 @@ import { setContentDigest } from '../../src/util/hash';
 // The fork's engine digest, exactly as main.ts sets it at load.
 setContentDigest('SHA-1');
 
-// TLS: the dev server's self-signed certificate is trusted explicitly through NODE_EXTRA_CA_CERTS, which run.sh sets
-// before jest starts. Certificate checking itself stays on.
+// TLS: compose.yml serves plain HTTP. For an https:// server, run.sh trusts its certificate through NODE_EXTRA_CA_CERTS
+// before jest starts; certificate checking itself stays on.
