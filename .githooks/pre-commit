@@ -57,16 +57,7 @@ echo "pre-commit: no secrets detected."
 ) || exit 1
 # <<< secret-scan (secretlint) <<<
 
-# >>> public-author-gate >>>
-# Block commits authored under anything but the public identity (bypass: git commit --no-verify)
-(
-  _pa_email="$(git var GIT_AUTHOR_IDENT 2>/dev/null | grep -oP '<\K[^>]+')"
-  if [ "$_pa_email" != "siosig@gmail.com" ]; then
-    echo "pre-commit: commit author must be Daisuke ITO <siosig@gmail.com> (got: ${_pa_email:-unknown}) (bypass: git commit --no-verify)." >&2
-    exit 1
-  fi
-) || exit 1
-# <<< public-author-gate <<<
+# [opencloud-fork] The upstream public-author gate (commits had to be authored as the upstream maintainer) is removed in this fork.
 
 # >>> english-only-content >>>
 # Block staged Japanese/CJK content outside *.ja* files (bypass: git commit --no-verify)

@@ -45,9 +45,9 @@ describe('[SPEC:SU-1] MKCOL 409 carries the missing-subfolder hint', () => {
     expect(failure.body).toBe('');
     expect(failure.message.startsWith('HTTP 409 (MKCOL)')).toBe(true);
     expect(failure.message).toContain(MISSING_PARENT_HINT);
-    expect(MISSING_PARENT_HINT).toContain('Server URL');
-    expect(MISSING_PARENT_HINT).toContain('subfolder');
-    expect(MISSING_PARENT_HINT).toContain('does not create');
+    // [opencloud-fork] The fork creates the folder inside the space itself; the hint points at a removed space instead.
+    expect(MISSING_PARENT_HINT).toContain('creates the folder inside the space itself');
+    expect(MISSING_PARENT_HINT).toContain('Connect');
   });
 
   it('RemoteDirCreateError: a 409 from the ancestor MKCOL keeps its folder message and adds the hint', async () => {
@@ -131,21 +131,15 @@ describe('[SPEC:SU-2] no hint for anything but a MKCOL 409', () => {
   });
 });
 
-describe('[SPEC:SU-4] the READMEs state the premise and how to check a 409', () => {
+describe('[SPEC:SU-4] the README states the premise and how to check a 409', () => {
+  // [opencloud-fork] README.md only (the Japanese README was removed), with the fork's premise: the plugin creates the
+  // folder inside the space, so a 409 means the space or a parent folder was removed.
   const root = join(__dirname, '..', '..', '..');
   const en = readFileSync(join(root, 'README.md'), 'utf-8');
-  const ja = readFileSync(join(root, 'README.ja.md'), 'utf-8');
 
-  it('README.md says the subfolder must exist, that the plugin does not create it, and names HTTP 409 (MKCOL)', () => {
-    expect(en).toMatch(/subfolder[^.]*already exist/i);
-    expect(en).toMatch(/does not create/i);
+  it('README.md says the plugin creates the folder itself, names HTTP 409 (MKCOL) and what to check', () => {
+    expect(en).toMatch(/creates the \*Folder in space\*/i);
     expect(en).toContain('HTTP 409 (MKCOL)');
-  });
-
-  it('README.ja.md says the same in Japanese', () => {
-    // The Japanese words "subfolder" and "does not create", written as escapes so this file stays free of CJK.
-    expect(ja).toContain('\u30b5\u30d6\u30d5\u30a9\u30eb\u30c0');
-    expect(ja).toContain('\u4f5c\u6210\u3057\u307e\u305b\u3093');
-    expect(ja).toContain('HTTP 409 (MKCOL)');
+    expect(en).toMatch(/space or a parent\s+folder was removed/i);
   });
 });

@@ -1,0 +1,13 @@
+# [opencloud-fork] Files this fork owns outright: on an upstream merge where both sides changed them, keep ours.
+# Needs once per clone: git config merge.ours.driver true
+# Upstream changes to these files are dropped silently, so only files whose content is the fork's own belong here.
+manifest.json merge=ours
+versions.json merge=ours
+README.md merge=ours
+CHANGELOG.md merge=ours
+
+# Upstream tests that only pin README text or user-visible labels, which the fork rewrote for OpenCloud.
+tests/a-no-nextcloud/network/certTrustReadme.test.ts merge=ours
+tests/a-no-nextcloud/ui/defaultsDoc.test.ts merge=ours
+tests/a-no-nextcloud/ui/syncRibbon.test.ts merge=ours
+tests/a-no-nextcloud/ui/breakerReport.test.ts merge=ours

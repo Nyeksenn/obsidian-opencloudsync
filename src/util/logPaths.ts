@@ -8,7 +8,7 @@ export function joinLogPath(logsFolder: string, filename: string): string {
 // the File Explorer unless "Detect all file extensions" is on; the file is still written and syncable.
 // The host token keeps devices from colliding when another device's log syncs into this vault.
 export function debugLogPath(logsFolder: string, host: string): string {
-  return joinLogPath(logsFolder, `nextcloud-debug_${host}.txt`);
+  return joinLogPath(logsFolder, `opencloud-debug_${host}.txt`); // [opencloud-fork]
 }
 
 // Syncing the file being appended to errors (the atomic-write rename races the live append:

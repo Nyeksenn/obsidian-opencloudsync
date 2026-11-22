@@ -1,199 +1,89 @@
-# Nextcloud Sync for Obsidian
+# OpenCloud Sync for Obsidian
 
-**Good news for anyone working across multiple desktops and mobile devices.**
+Bidirectional sync between an Obsidian vault and a **space on an [OpenCloud](https://opencloud.eu) server** — your
+personal space or a project space you share with others.
 
-The only cost you pay is waiting for the initial Vault index to complete on first install. From that moment on, you get:
+This plugin is a fork of [Nextcloud Sync](https://github.com/siosig/obsidian-nextcloudsync) by Daisuke ITO. Its sync
+engine — three-way merge of concurrent edits, conflict handling that never drops a side, mass-deletion safety checks,
+rename detection, sync on file change — is upstream's, unchanged. What this fork replaces is the server side: it talks to
+OpenCloud's own APIs (spaces, SHA-1 checksums, TUS uploads, version history) instead of Nextcloud's.
 
-- **Your writing is never lost** — the merge logic keeps your Vault in a clean, consistent state even when the same note is edited on multiple devices at once.
-- **Sync fades into the background** — Nextcloud's fast differential sync means you'll stop noticing sync time altogether.
-- **Built and tested for Nextcloud** — other WebDAV servers can connect, but they are not supported and may not work (see Requirements).
+> **Early release.** It works end to end against OpenCloud 9.x and is covered by unit tests and a live test suite, but
+> it has not had wide real-world use yet. Keep a backup of your vault.
 
----
+## What's new (0.1.0)
 
-Bidirectional sync between your Obsidian Vault and Nextcloud — built **specifically for Nextcloud**, not just generic WebDAV.
+First release of the OpenCloud fork:
 
-Most "WebDAV sync" plugins treat the server as a dumb file store: they compare modification times, copy files, and hope for the best. **Nextcloud Sync** instead talks to Nextcloud's own APIs (Capabilities, file IDs, checksums, versions, locking, Login Flow v2) to make syncing *safe*, *fast*, and *frictionless* — while still degrading gracefully to plain WebDAV when those APIs aren't available.
-
-> A Japanese translation is available at [`README.ja.md`](README.ja.md).
-
----
-
-## 💬 Your feedback shapes this plugin
-
-This plugin is still young and some behaviour can be rough around the edges. **Please tell me what you run into — it genuinely helps.** Whether something broke, something's missing, or you just have a thought after using it, I'd love to hear from you (impressions especially make my day!):
-
-- 🐛 **Report a bug** → [GitHub Issues](https://github.com/siosig/obsidian-nextcloudsync/issues)
-- 🙋‍♂️ **Request a feature / share your impressions** → [GitHub Discussions](https://github.com/siosig/obsidian-nextcloudsync/discussions)
-
----
-
-## What's new in this release (1.0.18)
-
-- **A changed app password applies without a restart (1.0.18)** — Selecting another secret for the app password, rewriting the value of the selected secret, or entering the password for the first time after Obsidian started now applies from the next sync. Previously the password read at start-up kept being used, so syncs failed with HTTP 401 until Obsidian or the plugin was restarted. When the password changes, the plugin reconnects so that nothing detected under a failed sign-in is kept. There is no new setting.
-
-For the full version history of every release, see the **[changelog](CHANGELOG.md)**.
-
----
-
-## Why Nextcloud-specific? (vs. generic WebDAV)
-
-| Concern | Generic WebDAV plugin | **Nextcloud Sync** |
-|---------|-----------------------|--------------------|
-| Change detection | Modification time (clock-skew prone, false re-uploads) | **Content hash** + Nextcloud `sync-token` / checksums capability for true differential sync |
-| Rename / move | Delete + re-create (loses history, re-downloads everywhere) | **File-ID (`OC-FileId`) tracking** — a rename stays a rename on every device, history preserved |
-| Deletion safety | Hard delete | Routed through the **Nextcloud trashbin** — recoverable, never an irreversible `DELETE` |
-| Setup | Manual app-password copy & paste | **Login Flow v2** — approve in the browser, credentials are issued and stored automatically |
-| Large files | Skipped or fail on a single `PUT` | **Chunked upload** — split, resumable, checksum-verified |
-| Concurrent edits | Hope nobody else writes | **Optimistic concurrency** — every update carries an `If-Match` precondition, so a remote changed by another device is turned into a conflict (no lost update) without locking round trips |
-| Recovery from mistakes | None (your copy is all you have) | **Server version history** — browse and restore any past revision from inside Obsidian |
-| Server unavailable | Cryptic errors / partial writes | **Maintenance-mode detection** (`/status.php`) and parsed Nextcloud error messages |
-| Capability awareness | None | **Capabilities probing** (`/ocs/.../capabilities`) — features light up only when the server supports them (Progressive Enhancement) |
-
-If you point it at a WebDAV server that is not detected as Nextcloud, it disables the Nextcloud-only features and falls back to standard recursive WebDAV sync. A server that answers Nextcloud's probes, such as ownCloud, is treated as Nextcloud and does not fall back. Neither case is supported: the plugin is tested against Nextcloud, and testing it against every server that speaks WebDAV is not realistic, so it may not work there.
-
----
-
-## Features
-
-### Core sync
-- **Bidirectional sync** between Obsidian and Nextcloud.
-- **Hash-based differential sync** — only changed files are transferred (no full rescans), so a 1,000-file Vault settles in seconds.
-- **Atomic writes** — a download interrupted mid-transfer never leaves a half-written or 0-byte file in your Vault.
-- **Rename / move tracking** via Nextcloud file IDs — moving a note doesn't re-upload it everywhere.
-- **Trashbin deletes** — remote deletions use the Nextcloud trashbin (recoverable). When a deletion is applied to your local Vault, it follows **your Obsidian "Deleted files" setting** (system trash / move to `.trash` / permanently delete) rather than forcing one behavior; folders and files outside the Vault's tracked notes (e.g. config-folder files) are handled too.
-- **Per-Vault configuration** — each Vault can target a different Nextcloud server / account without state bleeding between them.
-- **Community plugin sync (opt-in, per plugin)** — with **Sync config folder** on, pick community plugins under **Choose plugins…** and their four files (`manifest.json`, `main.js`, `styles.css`, `data.json`, directly in the plugin folder) sync between devices that both list the plugin. **Dangerous:** syncing a plugin copies its code to your other devices, where Obsidian runs it; only sync plugins you trust. Each device keeps its own list, and turning a plugin on or off is never synced.
-- **Excluded folders** — register Vault-relative folders that are never synced (neither uploaded nor downloaded, and never created on the server). Useful for version-control or tooling folders such as `.git`, and for large media you keep device-local. Matching is a folder-prefix match at a folder boundary, so `Attachments` excludes `Attachments/` and everything under it but not `Attachments-old`. Add or remove entries under **Settings → Excluded folders** (type a path or use the folder picker). Dotfolders (`.git`, this plugin's own folder and state, and community plugins you have not picked) are already excluded automatically; this list is an additive layer on top.
-- **Periodic auto-sync** with a configurable interval (set to `0` for manual-only), plus a **Sync now** command.
-- **Sync on file change (watch mode)** — optionally sync immediately after you create, edit, delete, or rename a file **or folder** (file edits are debounced ~2s after you stop typing; deletes, renames and folder operations propagate right away). The status bar shows when a change is being pushed. Toggle on/off in settings; works alongside the periodic interval. Available on desktop and mobile — off by default on mobile, where it runs only while Obsidian is open and anything it misses is sent on the next sync. Paused on cellular when **Sync on Wi-Fi only** is on.
-- **Resilient retries** — failed files are skipped, queued, and retried next sync with exponential backoff; a dropped Wi-Fi connection resumes automatically.
-- **Standard WebDAV fallback** — on a server that is not detected as Nextcloud, the plugin syncs over plain recursive WebDAV with the Nextcloud features disabled. Best effort only, not supported (see Requirements).
-- **Filter the sync-status dialog by status** — the status dialog has a checkbox row (Uploaded, Downloaded, Deleted, Merged, Conflicted, Local wins, Remote wins, Error) so you can focus on, say, only conflicts. All on by default; your selection is saved and persists across Obsidian restarts, and applies to every section.
-- **Compare a file with its remote version** — right-click any file in the explorer (on mobile: long-press, or run the *Compare with remote* command) to open a popup comparing local vs remote modification time, checksum (with a match/mismatch badge), and a line diff. On narrow screens the diff stacks vertically. Resolve the difference right there with **push** (overwrite remote with local) or **pull** (overwrite local with remote), each behind a confirmation.
-- **Per-device logging** — one opt-in log file, `nextcloud-debug_<device>.txt`, written to the vault root and named per device so multiple devices never overwrite one another (another device's log can even sync into this vault for side-by-side comparison). Each line is timestamped and carries the plugin version, and a full settings snapshot is written when logging turns on; every sync operation is recorded. Useful for troubleshooting on mobile where there's no console. Note: Obsidian hides `.txt` files unless *Settings → Files & Links → Detect all file extensions* is on, and they never appear in Quick Switcher — you can also open the file from your OS or Nextcloud. Turn logging off and delete the file when finished.
-- **Reset the Vault index** *(Settings → Maintenance)* — clear this device's sync tracking index back to its first-install state (behind a confirmation) so the next sync re-scans everything. No Vault or remote files are deleted; use it to recover from inconsistent sync state.
-- **Mirror from remote** *(Settings → Maintenance)* — force this device's vault to exactly match the remote: download everything the remote has and delete local files/folders the remote lacks (honoring your Obsidian trash setting, so removals are recoverable). A confirmation shows how many files will be downloaded and deleted first; unsynced local changes are discarded. It bypasses the mass-delete safety limit (you have explicitly declared the remote authoritative) but aborts without deleting anything if the remote listing can't be fully read. Handy for making a device follow the remote after migrating from another sync tool.
-
-### Conflict safety (never lose content)
-- **A strategy per file type.** You pick **which extensions are "auto merge files"** (markdown, text and common code extensions by default) and a conflict strategy for each side: an **Auto merge file strategy** and an **Other file strategy** (everything else — images, PDFs, config JSON). Every conflict is always decided — there is no hold/error mode.
-- **Merge** (`reconcile-text` / diff3, the default for auto merge files) integrates edits in different regions, including YAML frontmatter when the two sides changed non-overlapping lines. A text conflict is written as conflict markers; a non-text file is left untouched and flagged (never corrupted with markers).
-- **Deterministic strategies** for anything else: **Latest modified** (keep the newer side — the default for other files), **Biggest size** (keep the larger), **Local wins**, or **Remote wins**. A size/mtime tie is left untouched and re-evaluated on the next sync. Keep Nextcloud version history on so an overwritten side is recoverable; *Compare with remote* lets you resolve any file by hand.
-- **Conflict badge** in the status bar showing the count of unresolved conflicts (clears to normal at zero; pairs well with a `#conflict` tag search).
-
-### Nextcloud power features
-- **Login Flow v2** — set up with a browser approval instead of manually issuing and pasting an app password. Credentials are stored in Obsidian's secret credentials store, **never in plain text** in `data.json`.
-- **Server version history** — for the active note, list every revision the server holds (newest first) and restore any of them atomically, with confirmation. The restored content syncs back cleanly without triggering an infinite conflict loop.
-- **Chunked upload** — large attachments (images, PDFs, audio) above the chunk threshold are split and uploaded resumably; interrupted uploads never publish a partial file, and completion is checksum-verified. A separate absolute `maxFileSizeMB` cap guards memory in **both directions** — oversized files are skipped on upload *and* on download (the download size is taken from the server's PROPFIND, so the body is never fetched).
-- **Lost-update safety without locking** — every update carries an always-on `If-Match` precondition: a remote changed by another client returns 412, which the engine turns into a conflict (download remote + resolve). This replaces per-file WebDAV LOCK/UNLOCK round trips, so server-side file locking is intentionally never used.
-
----
-
-## Mobile (iOS / Android)
-
-Mobile is supported, with a few platform-aware differences (desktop behaviour is unchanged):
-
-- **Automatic sync is off by default on mobile.** The OS suspends background timers, so periodic auto-sync is disabled (greyed out). **Sync on file change** can be turned on (it is off by default on mobile): it runs while Obsidian is open, which is when you are editing. What runs by default: **Sync on startup**, on by default on every platform (since 0.7.11), which syncs a few seconds after the app opens; **sync on returning to the app** (since 1.0.2), which covers the case where Obsidian was left running in the background rather than restarted, and runs at most once every five minutes; and **Sync now** whenever you want it.
-- **Large files are skipped on mobile** in **both directions (upload and download)** above the "Maximum file size" limit (set `0` for unlimited) to avoid out-of-memory crashes; a manual sync ends with one notice telling how many files were skipped, and automatic syncs only log them.
-- **No progress UI on mobile** — only error notices are shown.
-- **Network concurrency** is configurable; its first-run default is derived from the device's available memory — uniformly on desktop and mobile, with no platform-specific branch: **16** with 8 GB of RAM or more, **8** at 4 GB or more, **4** below that, and **3** when the device doesn't report its memory (common on mobile). Transfers run with bounded parallelism — capped both by this count and by a total in-flight-bytes budget (smaller on mobile) so large files can't exhaust memory — and uploads to the same folder are serialized to avoid server lock contention.
-- **Sync on Wi-Fi only** skips on cellular — for a full sync and for sync on file change alike. It takes effect on Android only: it is **not available on iOS** (no network-type API), where the toggle is disabled, and it has no effect on desktop, where the app cannot see the network type.
-- **Sync now shows a result notice on mobile** (uploads / downloads / conflicts, or "already up to date") since there's no status bar. Tapping it while not signed in stays disabled, and the settings screen shows a clear "not signed in yet" banner.
-- **Sync and Mirror from remote are two taps.** Obsidian mobile draws no ribbon bar, so a plugin icon never appears in place — but the app republishes every ribbon action under **Open menu** (the last item on the navigation bar), where you'll find **Sync with Nextcloud** and **Mirror from remote**. For one tap instead of two, pin a command to the mobile toolbar: **Settings → Mobile → Manage toolbar options**, scroll to **Add global command**, and add **Sync now**, **Open sync status** or **Mirror from remote**. **Open sync status** opens the dialog holding both actions plus the last session's activity. Mirror from remote always shows its confirmation, with the file counts, before anything is downloaded or deleted.
-- Debug mode (diagnostic log) is available on mobile and does not change syncing.
+- Sign in with server URL, username and an OpenCloud **app token**; everything else is discovered.
+- Choose the **space** to sync into (personal or project), optionally a folder inside it.
+- Large files upload with **TUS**; version history and restore use OpenCloud's versions.
 
 ## Requirements
 
-- **Obsidian** `1.13.0` or later. Desktop (Electron) and mobile (iOS / Android) are supported. **This is a change in 1.0.0** — earlier releases required `1.11.4`. The settings tab now uses Obsidian's declarative settings API, which is what makes the plugin's settings findable in Obsidian's own settings search; that API arrived in `1.13.0`, and below it the settings screen would come up empty. Obsidian will not offer 1.0.0 to older installs, so they stay on `0.7.44` until they update Obsidian.
-- **Nextcloud** Hub 26 "Winter" (server `33`) or later is **recommended** for the Nextcloud-specific features. Older Nextcloud servers are no longer blocked — they still connect and sync, but the settings screen shows a recommendation banner and some features may degrade. Nextcloud is the only supported server. Other WebDAV servers can connect, but their behaviour is not guaranteed: a plain WebDAV server falls back to core sync, and a Nextcloud-compatible server such as ownCloud is treated as Nextcloud without being tested against a real instance.
-- A Nextcloud account. You can authenticate with **Login Flow v2** (recommended) or a manually issued **app password** (never your main password).
-- **Server certificate**: the server's HTTPS certificate must be trusted by the device running Obsidian. On Android this in practice means a publicly trusted certificate. See "Server certificate not trusted" in the [FAQ](#faq).
-
----
-
-## Installation
-
-### From the Community Plugins browser (recommended)
-1. In Obsidian, open **Settings → Community plugins**.
-2. Disable Restricted mode, click **Browse**, and search for **Nextcloud Sync**.
-3. **Install**, then **Enable**.
-
-### Manual installation
-1. Download `main.js` and `manifest.json` (and `styles.css` if present) from the latest [GitHub Release](../../releases).
-2. Copy them into `<YourVault>/.obsidian/plugins/nextcloud-sync/`.
-3. Reload Obsidian and enable **Nextcloud Sync** under **Settings → Community plugins**.
-
----
+- Obsidian **1.13.0** or later (desktop or mobile).
+- An OpenCloud server (tested with 9.2) and an account on it.
+- An **app token** for that account (your account password does not work for sync). See below.
+- A server certificate the device trusts. A self-signed or private-CA certificate often does not work; see
+  "Server certificate not trusted" in the [FAQ](#faq).
 
 ## Getting started
 
-1. Open **Settings → Nextcloud Sync**.
-2. Enter your **Server URL** — the full WebDAV endpoint, `https://<host>/remote.php/dav/files/<user>/`,
-   **not just the host**. Entering only `https://cloud.example.com` fails with **HTTP 405**. `<user>` is your
-   Nextcloud user ID (usually not your email). You may append a subfolder (e.g. `.../<user>/Documents`) to
-   sync there instead of at the account root.
-   The subfolder must already exist in Nextcloud: the plugin creates the vault folder inside it but does not create the
-   subfolder itself. If the sync fails with `HTTP 409 (MKCOL)`, check that it exists (see the FAQ).
-3. Authenticate:
-   - **Recommended:** click **Login with browser** (Login Flow v2), approve in the browser, and credentials are filled in and stored automatically; **or**
-   - enter your **username** and a manually issued **app password**.
-4. (Optional) Adjust the auto-sync interval, **Sync on file change** (watch mode), and auto-merge options.
-5. Run the **Sync now** command (or wait for the periodic sync). The first run performs a full scan of your Vault and the remote, then transfers what's needed; subsequent syncs are incremental.
+1. **Get an app token.** In OpenCloud, open your account settings and create an app token if your server shows that
+   page. Otherwise ask your administrator, who can create one with
+   `opencloud auth-app create --user-name=<you> --expiration=8760h`. Tokens can expire; when one does, sync fails with
+   HTTP 401 until you link a new one.
+2. **Install the plugin.** In Obsidian, open *Settings → Community plugins → Browse*, search for **OpenCloud Sync**,
+   install and enable it. To install by hand instead, copy `main.js`, `manifest.json` and `styles.css` from a
+   [release](https://github.com/Nyeksenn/obsidian-opencloudsync/releases) into
+   `<vault>/.obsidian/plugins/opencloud-sync/`.
+3. **Open Settings → OpenCloud Sync** and fill in the *OpenCloud* section:
+   - **Server URL** — e.g. `https://cloud.example.com` (a pasted web or WebDAV address is trimmed to this);
+   - **Username**;
+   - **App token** — click *Link…* to store it in Obsidian's encrypted Secret Storage (never in `data.json`).
+4. Press **Connect**, then pick a **Space**. Optionally enter a **Folder in space** (e.g. `Obsidian/Work`); leave it
+   empty to sync into the space root.
+5. Press **Sync now**. The first sync compares the whole vault with the space; after that only changes move.
 
-Your Vault is synced into a folder named after the Vault on the Nextcloud side, keeping multiple Vaults cleanly separated.
+Adding another device: repeat steps 2–5 with the same space (and folder). Each device keeps its own sync state.
 
-### Adding a second device
+### Changing the space or folder later
 
-The plugin syncs a Vault that is already open in Obsidian — it does not open a Nextcloud folder as a Vault. So a second device does not browse to the remote; it starts with its own Vault that happens to carry the same name:
+Pick another space (or edit the folder) and confirm. This device's sync tracking is reset first, so the next sync
+compares the whole vault with the new target. No files are deleted locally or on the server by the switch itself.
 
-1. On the second device, **create a new, empty Vault** and give it **exactly the same name** as the first one. That name *is* the remote folder, matched character for character including case — `My Notes` and `my notes` are two separate folders on the server.
-2. Install and enable Nextcloud Sync in that Vault, enter the **same Server URL**, and authenticate.
-3. Run **Sync now**. The first run downloads the existing Vault into the new one.
+## How it works (in brief)
 
-To confirm both devices agree, compare the read-only **Sync target (WebDAV)** row in **Settings → Nextcloud Sync**: it shows the effective remote path (Server URL plus Vault folder). If that line reads identically on both devices, they point at the same place.
+- Files are found by walking the space with WebDAV `PROPFIND` (Depth 1) and compared by **SHA-1**, which OpenCloud
+  computes for every file, so unchanged content is never transferred twice.
+- When nothing changed on the server, one request on the space root ETag replaces the full listing.
+- Uploads carry the checksum and modification time; an upload never overwrites a newer server copy (`If-Match`).
+- Concurrent edits to the same note are merged; overlapping edits keep both sides with conflict markers.
+- Deleting many files at once stops and asks first (mass-delete safety check).
 
-On Obsidian mobile, this means **Create new vault** — not *Set up Obsidian Sync*, which is Obsidian's own paid service, and not *Open folder as vault*, which only opens a folder already present in the phone's storage.
+Details for developers: [`docs/opencloud.md`](docs/opencloud.md).
 
-If the Vault on the second device is **not** empty, back it up first. The first sync reconciles both sides, so notes already there are uploaded as well as downloaded.
+## Privacy and network use
 
----
+- **Account required.** The plugin needs an account on an OpenCloud server that you or your organisation run, and an app
+  token for it. The plugin itself is free; it requires no payment and shows no ads.
+- **Network use.** The plugin connects only to the OpenCloud server whose URL you enter, to sync your files: it lists
+  your spaces (`/graph/v1.0/me/drives`), reads the server's capabilities and status, and reads and writes files, versions
+  and uploads in the space you choose (WebDAV under `/dav/`). It contacts no other service.
+- **No telemetry.** Nothing about you or your usage is collected or sent anywhere. The optional debug log
+  (*Enable logging*, off by default) is a local file in your vault; the device's current log is excluded from sync.
+  Delete old log files (`opencloud-debug_*.txt`) yourself if you do not want them synced like other vault files.
+- **Files.** The plugin reads and writes only inside your vault: your notes and, if you enable *Sync config folder*,
+  parts of the vault's configuration folder. Its own state lives in the plugin folder (`.obsidian/plugins/opencloud-sync/`).
+  The app token is kept in Obsidian's Secret Storage, not in plain text.
+- **Open source.** All code is in this repository under the MIT license; bundled third-party code is listed in
+  [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## FAQ
 
-**Can I use a scoped Nextcloud Public Link Share instead of granting full account access?**
-
-Yes. If you'd rather not hand the plugin an app password with full account access, you can share a single directory as a **Public Link Share with username/password** on the Nextcloud side, then point the plugin at it:
-
-- **Server URL:** `https://<host>/public.php/webdav/` (the newer form `https://<host>/public.php/dav/files/<token>/` also works)
-- **Username:** the share token (the part of the share link after `/s/`)
-- **App password:** the share's password
-
-One point of confusion here: when you click **Link…** to store the app password, you're asked for an **ID** and a **value**. The **ID is a local storage key inside Obsidian's encrypted Secret Storage — it is never sent to the server**, so it can be anything (e.g. `default`); it's restricted to lowercase letters/digits/dashes because that's an Obsidian platform constraint, not something this plugin controls. The actual share password goes in the **value**, which accepts any characters. Put the share token in the **Username** field, not in the ID field.
-
-Note: the plugin detects a Public Link Share automatically. On a share it does not use version history / restore or chunked upload (both need account-only endpoints that a share cannot reach), and large files are uploaded in a single request. Everything else, including the fast change detection, works as with an account URL.
-
----
-
-**I got `HTTP 423 (PUT)` or `HTTP 423 (DELETE)` — what does that mean?**
-
-A 423 means the file is locked on the Nextcloud **server** side, not by this plugin. It can happen either from one of the four force-resolve choices in Sync Status (Use remote / Use local / Latest modified / Biggest size) or during a normal background sync. A common cause is a lock left behind by the Nextcloud Text web editor: opening a file there takes out a lock with no timeout, and if the browser tab or session ends uncleanly the lock can leak and stay in place indefinitely. It can also be a genuine lock held by someone actively editing the same file elsewhere.
-
-When the server reports a lock owner, the plugin's notice and Sync Status result listing now show that owner instead of the previous bare "HTTP 423 (PUT)" message with no explanation.
-
-This plugin does not resolve the lock automatically and has no in-app "unlock" action — releasing a lock without knowing its origin risks overwriting someone else's in-progress edit. To resolve it, close the session or tab holding the lock (e.g. the Nextcloud Text editor tab), or ask a server administrator to clear it if it's genuinely leaked or stuck.
-
----
-
-**I got `HTTP 409 (MKCOL)` after adding a subfolder to the Server URL — what does that mean?**
-
-A 409 on `MKCOL` means a parent folder is missing on the server. The usual cause is a Server URL such as `https://<host>/remote.php/dav/files/<user>/Test` where `Test` does not exist in Nextcloud yet: the plugin creates the vault folder *inside* `Test` but does not create `Test` itself, because a mistyped path would otherwise be created silently and put your vault in the wrong place. The notice and the Sync Status result listing now say this next to the error.
-
-To fix it, create the subfolder in Nextcloud (for example in the web interface) or correct the Server URL, then sync again.
-
----
-
 **Server certificate not trusted (`Trust anchor for certification path not found` / `net::ERR_CERT_AUTHORITY_INVALID`) — can I use a self-signed or private-CA certificate?**
 
-The error looks like this. On Android: `Request Failed. SSLHandshakeException java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.` On desktop: `net::ERR_CERT_AUTHORITY_INVALID`. Both mean the device running Obsidian does not trust the HTTPS certificate your Nextcloud server presents, typically because it is self-signed or issued by a private CA.
+The error looks like this. On Android: `Request Failed. SSLHandshakeException java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.` On desktop: `net::ERR_CERT_AUTHORITY_INVALID`. Both mean the device running Obsidian does not trust the HTTPS certificate your OpenCloud server presents, typically because it is self-signed or issued by a private CA.
 
 The cause is that all of the plugin's network traffic goes through Obsidian's `requestUrl`, and this API has no way to supply a CA or to skip the check. So this cannot be fixed from the plugin settings.
 
@@ -214,136 +104,66 @@ An expired certificate (`net::ERR_CERT_DATE_INVALID`) or a name mismatch (`net::
 
 ---
 
-## Enabling Nextcloud server-side features
+**Sync fails with `HTTP 409 (MKCOL)` — "a parent folder is missing on the server".**
+The plugin creates the *Folder in space* (and any missing parent folders) itself, so this means the space or a parent
+folder was removed while the plugin was working. Press *Connect*, check that the space is still listed, and sync again.
 
-One power feature depends on a server-side Nextcloud app. It only needs to be enabled **once by a Nextcloud administrator**. The plugin detects it through the capabilities API — if the app is missing, the feature simply stays inactive (no error).
+**Sync fails with HTTP 401.**
+The username or app token is wrong, or the token expired. Create a new token and link it under *App token*.
 
-> **Lost-update safety needs no setting.** The plugin always sends an `If-Match` precondition on upload, so a file changed on the server by another client is turned into a conflict instead of being silently overwritten — there is no File Locking toggle to configure.
+**"The OpenCloud space … is no longer available".**
+The space was deleted or disabled, or your access was removed. Press *Connect* and choose a space again. The plugin
+never treats a missing space as "everything was deleted".
 
-### Version history
-
-Server-side versions come from the built-in **Versions** app (app ID `files_versions`), which is **enabled by default** on a standard Nextcloud install — usually nothing to do.
-
-- If it was disabled, re-enable it: **Apps → Versions → Enable**, or:
-  ```bash
-  sudo -u www-data php /var/www/nextcloud/occ app:enable files_versions
-  ```
-- Versions are created automatically as files change; browse and restore them with the **Show version history** command in Obsidian.
-- A note must have been changed on the server at least once for prior revisions to exist. Retention is configured server-side by the admin (`versions_retention_obligation` in `config.php`).
-
-### Other settings worth checking
-
-These are not strictly required, but on self-hosted instances they often need attention for smooth, reliable syncing. All are server-side (admin) settings.
-
-- **Trusted domains** — the host you connect to must be listed in `trusted_domains` in `config.php`, otherwise the server rejects requests. Add your domain/IP if needed.
-- **HTTPS & reverse proxy (important for Login Flow v2)** — behind a reverse proxy, set `overwriteprotocol => 'https'`, `overwritehost`, `overwrite.cli.url`, and `trusted_proxies` correctly. If these are wrong, the URLs returned by Login Flow v2 (and downloads) can point to the wrong scheme/host and fail. Always use an `https://` server URL in the plugin.
-- **Upload size limits (for chunked upload / large attachments)** — raise PHP `upload_max_filesize` and `post_max_size`, and the web-server body limit (nginx `client_max_body_size`, e.g. `0` or a large value). Chunked upload sends small chunks, but the final assembly and very large files still hit these limits.
-- **Request timeouts** — for large vaults or big files, increase PHP `max_execution_time` and php-fpm / web-server timeouts (e.g. nginx `fastcgi_read_timeout`). The plugin uses a fixed 30-second network timeout.
-- **Brute-force protection** — Nextcloud throttles repeated requests from one IP and can return HTTP 429, especially when several devices sync from the same network or after auth errors. If you hit this, whitelist the network in **Administration settings → Security**, or set `auth.bruteforce.protection.enabled`/the IP allow-list in `config.php`.
-- **Background jobs (cron)** — configure Nextcloud's recommended **Cron** background-job mode so version cleanup and other maintenance run reliably.
-- **App passwords & two-factor auth** — never use your main account password; if 2FA is enabled an app password is mandatory. Login Flow v2 issues one for you automatically.
-- **Checksums (optional, recommended)** — the plugin prefers Nextcloud's `oc:checksums` (SHA-256) for change detection and automatically falls back to ETag when they aren't present, so no configuration is required; leaving Nextcloud's default checksum support enabled gives the most accurate detection.
-
----
+**Can I sync with Nextcloud or another WebDAV server?**
+No. Use the original [Nextcloud Sync](https://github.com/siosig/obsidian-nextcloudsync) plugin for Nextcloud.
 
 ## Settings defaults
 
-The settings screen is intentionally minimal: only Server URL, sign-in, Sync folder,
-Sync interval, Wi-Fi only, Excluded folders, the config-folder toggles, and an
-*Enable logging* switch are shown. Every other option was removed and is now a fixed
-value or derived automatically from your platform. They are documented here so you
-always know what the plugin is doing.
-
-### Editable settings (initial values)
-
-These are the options you can change. Most start the same on both platforms; a few differ on first run.
-
 | Setting | Desktop | Mobile |
 |---|---|---|
-| Server URL / Username / App password | empty | empty |
-| Sync interval | 15 min | 15 min (disabled — use *Sync now* or *Sync on startup*) |
-| Sync on Wi-Fi only | off | on |
-| Sync config folder (master) | off | off |
-| └ Bookmarks / Other settings | on / on | on / on |
-| └ Choose plugins… (synced community plugins, per device) | empty | empty |
-| Auto merge file types | md, txt, cpp, py, c, h, hpp, rs, go, ts, js, java, sh | same |
-| Auto merge file strategy | Merge | Merge |
-| Other file strategy | Latest modified | Latest modified |
-| Enable logging | off | off |
-| Excluded folders | empty | empty |
-
-> The config-folder category toggles (Bookmarks, Other settings) only take effect once the master *Sync config folder* is on.
-
-### Fixed values (all platforms)
-
-| Setting | Value |
-|---|---|
-| Network timeout | 30 seconds |
-| Startup sync delay | 1 second (`0` = no startup sync) |
-| Chunk threshold | 50 MB (desktop) / 20 MB (mobile) |
-| Chunked upload | on |
-| Bulk upload | on |
-| File locking | off — `If-Match` preconditions provide lost-update safety |
-| Max conflict regions | 0 (no region-count fallback) |
-| Compare with remote | on (desktop and mobile) |
-| Log folder | vault root |
-| Device name | auto (`<platform>-<deviceId>`) |
-
-### Platform-derived values
-
-| Setting | Desktop | Mobile |
-|---|---|---|
-| Sync on file change | on | off |
+| Server URL / Username / App token / Space | empty | empty |
+| Folder in space | empty (space root) | empty (space root) |
+| Startup sync delay | 1 second (`0` = no startup sync) | 1 second |
+| Sync interval | 15 min (`0` = manual only) | off (the OS suspends timers; use *Sync now*) |
+| Network timeout | 30 seconds | 30 seconds |
+| Network concurrency | from device RAM: 16 (8 GB+), 8 (4 GB+), 4, or 3 when unknown | usually 3 |
 | Maximum file size | unlimited (`0`) | 20 MB |
-| Network concurrency | auto from RAM (≈ 16 on 8 GB+) | ≈ 3 |
+| Sync on Wi-Fi only | off | on |
+| Sync on file change | on | off |
+| Sync config folder | off | off |
+| Auto merge file types | txt, cpp, py, c, h, hpp, rs, go, ts, js, java, sh (Markdown is always merged) | same |
+| Conflict strategies | merge (auto-merge types, frontmatter), latest modified (other files) | same |
+| Enable logging | off | off |
 
----
-
-## How it works (in brief)
-
-On connect, the plugin probes `/status.php` (maintenance mode) and `/ocs/v1.php/cloud/capabilities` to learn the server version and which features (`checksums`, `files locking`, …) are available. It then maintains a **per-device state database** — a snapshot of every file's path, content hash, and remote file ID at the last successful sync. Each sync diffs the current state against that snapshot and the server's `sync-token`, transferring only what changed. Every Nextcloud-specific behavior is gated behind capability detection, so the same plugin works against a full Nextcloud Hub and a bare WebDAV server alike (**Progressive Enhancement**).
-
----
-
-## Testing & reliability
-
-Sync correctness is guarded by an extensive automated test suite: **hundreds of fast pure-logic tests** (run on every change) plus **live end-to-end suites that drive two devices against a real Nextcloud server**, including exhaustive option-combination matrices for conflict resolution and multi-device convergence.
-
-These tests exist specifically to prevent sync-inconsistency states — **data loss, endless re-uploading/re-downloading, a remote change that never reaches the local copy, or a local change that never reaches the remote**. Even so, no test suite can cover every possible case, and unintended behavior can never be entirely ruled out. **If you ever run into such a situation, please don't hesitate to [open an issue](https://github.com/siosig/obsidian-nextcloudsync/issues) — it will be addressed as quickly as possible.**
-
----
-
-## Privacy & security
-
-- **This plugin collects no telemetry whatsoever.** No usage data, analytics, or crash reports are gathered or sent anywhere; the only network traffic is the sync between your vault and your own Nextcloud/WebDAV server.
-- App passwords / credentials are kept in Obsidian's **secret credentials store**, never written in plain text to `data.json`.
-- Your **main account password is never used or stored** — only app passwords (issued manually or via Login Flow v2).
-- All network traffic uses Obsidian's `requestUrl` API.
-- The Obsidian config folder (`.obsidian/`) is excluded from sync by default — only your notes and other vault files are synced. You can opt in to syncing selected parts of it via **Sync config folder** (see below). **This plugin's own folder and its sync-state database never sync**, regardless of settings — they hold device-specific state, which is unsafe to overwrite across devices. Other community plugins (`.obsidian/plugins/`) sync only when you pick them under **Choose plugins…**; because that copies executable code to your other devices, it is marked **Dangerous** and needs two confirmations.
-
----
+Fixed: uploads above 50 MB (desktop) / 20 MB (mobile) use TUS chunks; file locking is off (`If-Match` preconditions
+prevent lost updates); the debug log is `opencloud-debug_<device>.txt` in the vault root.
 
 ## Limitations
 
-- **End-to-end encryption (E2EE)** relies on the HTTPS transport layer; the plugin does not add a redundant encryption layer of its own. This is a deliberate trade-off favouring maximum transport security and performance.
-- **Config folder sync is opt-in.** Enable **Sync config folder** in settings to sync `.obsidian/` config across devices, chosen with two toggles: **Bookmarks** and **Other settings** (appearance, themes & snippets, hotkeys, and core-plugin settings). **This plugin's own folder and its sync-state database never sync** (device-specific state). Community plugins sync only when you pick them with **Choose plugins…** (`manifest.json`, `main.js`, `styles.css` and `data.json` only; **Dangerous**, as it copies executable code to your other devices). A synced change to core-plugin settings may require an Obsidian restart on the other device to take effect.
-- Designed primarily for Markdown / text Vaults; single files in the hundreds-of-MB range are beyond the v1 design target.
-- Keep the Vault on local storage — don't double-manage it with another cloud sync (e.g. iCloud Drive) at the same time.
-- Nextcloud-specific features require a compatible Nextcloud version; on an older Nextcloud some of them may degrade. Servers other than Nextcloud are not supported: a plain WebDAV server falls back to core WebDAV sync, a Nextcloud-compatible server such as ownCloud is treated as Nextcloud, and in both cases the behaviour is not guaranteed.
+- **Creation times** are not synced: OpenCloud has no creation-time property.
+- The plugin's settings search covers all rows, but the *Space* dropdown fills only after *Connect*.
 
----
+## Development
 
-## Contributing & feedback
+```bash
+pnpm install
+pnpm dev           # watch build; OUTDIR=<vault>/.obsidian/plugins/opencloud-sync pnpm dev builds into a vault
+pnpm test          # unit tests (upstream's suite plus the fork's)
+podman-compose up -d && pnpm test:oc   # live tests against a local OpenCloud (see docs/local-opencloud.md)
+```
 
-Bug reports and ideas are genuinely welcome. The plugin is still maturing, and most of what has been fixed so far came from someone taking the time to describe what they saw.
-
-- 🐛 **Report a bug** → [GitHub Issues](https://github.com/siosig/obsidian-nextcloudsync/issues)
-- 🙋‍♂️ **Request a feature / share your impressions** → [GitHub Discussions](https://github.com/siosig/obsidian-nextcloudsync/discussions)
-
-**Please open an issue or a discussion rather than sending a pull request.** A PR that arrives unannounced is read as input and valued as such, but it is unlikely to be merged as it stands. This is a single-maintainer project with a deliberate design policy — user-facing options are kept deliberately few, and behaviour is pinned by a specification that the test suite checks against — so whether a change fits depends on decisions that are not visible from the code alone, and on what is already in flight. Judging that after the code is written is harder than agreeing on the approach beforehand, and it wastes your effort whenever the answer turns out to be no. Describe what you want to change and why; if it fits, the approach can be settled before you write anything.
-
----
+See [`CLAUDE.md`](CLAUDE.md) and [`docs/opencloud.md`](docs/opencloud.md) for the architecture and the rules
+that keep this fork mergeable with upstream.
 
 ## License
 
-[MIT](LICENSE) © Daisuke ITO
+MIT, as upstream; see [`LICENSE`](LICENSE). The original Nextcloud Sync plugin is the work of Daisuke ITO; the OpenCloud
+fork is by Clemens Albrecht.
+
+`main.js` also contains third-party code — reconcile-text (MIT, with Rust components under MIT), node-diff3 (MIT) and
+semver (ISC). Their license texts are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and, as their licenses
+require, embedded at the top of `main.js` itself.
+
+This is an independent community project. It is not affiliated with or endorsed by the OpenCloud project, Nextcloud
+GmbH or Obsidian. "OpenCloud", "Nextcloud" and "Obsidian" are used only to name the software this plugin works with.

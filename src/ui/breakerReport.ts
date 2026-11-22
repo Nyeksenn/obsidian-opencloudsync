@@ -2,14 +2,14 @@
 // Instead a single fixed-name report note is rewritten with the full candidate list and opened.
 // Fixed name (not per-timestamp) so it never accumulates stale copies; excluded from sync (isSystemExcluded) as a device-local diagnostic.
 
-export const DIR_BREAKER_REPORT_FILENAME = 'nextcloud-sync-dir-breaker-report.md';
+export const DIR_BREAKER_REPORT_FILENAME = 'opencloud-sync-dir-breaker-report.md'; // [opencloud-fork]
 
-export const FILE_BREAKER_REPORT_FILENAME = 'nextcloud-sync-file-breaker-report.md';
+export const FILE_BREAKER_REPORT_FILENAME = 'opencloud-sync-file-breaker-report.md'; // [opencloud-fork]
 
 // deleteRemote entries exist on the remote but not locally (the breaker refused to delete them remotely); trashLocal entries are the reverse.
 export function formatDirBreakerReportNote(skipped: { deleteRemote: string[]; trashLocal: string[] }): string {
   const lines: string[] = [
-    '# Nextcloud Sync — directory mass-delete breaker report',
+    '# OpenCloud Sync — directory mass-delete breaker report', // [opencloud-fork]
     '',
     'This note lists every directory the mass-delete safety breaker refused to delete, because too ' +
       'many looked deleted at once (often a sign of a partial or failed remote listing, not a real ' +
@@ -30,7 +30,7 @@ export function formatDirBreakerReportNote(skipped: { deleteRemote: string[]; tr
 
 export function formatFileBreakerReportNote(all: string[]): string {
   const lines: string[] = [
-    '# Nextcloud Sync — file mass-delete breaker report',
+    '# OpenCloud Sync — file mass-delete breaker report', // [opencloud-fork]
     '',
     'This note lists every file the mass-delete safety breaker refused to delete locally, because too ' +
       'many appeared deleted on the remote at once (often a sign of a partial or failed remote ' +

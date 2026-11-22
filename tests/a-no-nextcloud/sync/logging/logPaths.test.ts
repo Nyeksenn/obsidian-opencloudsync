@@ -3,12 +3,12 @@ import { joinLogPath, debugLogPath, isActiveOwnLog } from '../../../../src/util/
 describe('logPaths — the single per-device log file uses the .txt extension', () => {
   // The log is plain text (not Markdown); a .md extension makes editors render it as Markdown and
   // garble the output.
-  it('debug-log path is nextcloud-debug_<host>.txt', () => {
-    expect(debugLogPath('_logs', 'desktop-abc')).toBe('_logs/nextcloud-debug_desktop-abc.txt');
+  it('debug-log path is opencloud-debug_<host>.txt', () => {
+    expect(debugLogPath('_logs', 'desktop-abc')).toBe('_logs/opencloud-debug_desktop-abc.txt');
   });
 
   it('blank logsFolder puts the file at the vault root', () => {
-    expect(debugLogPath('', 'ios')).toBe('nextcloud-debug_ios.txt');
+    expect(debugLogPath('', 'ios')).toBe('opencloud-debug_ios.txt');
   });
 
   it('joinLogPath strips trailing slashes', () => {
@@ -40,6 +40,6 @@ describe('[SPEC:LOG-1] isActiveOwnLog — exclude the log only while THIS device
 
   it('works with a blank logsFolder (log at vault root)', () => {
     const root = { ...base, logsFolder: '' };
-    expect(isActiveOwnLog(`nextcloud-debug_${HOST}.txt`, root)).toBe(true);
+    expect(isActiveOwnLog(`opencloud-debug_${HOST}.txt`, root)).toBe(true);
   });
 });

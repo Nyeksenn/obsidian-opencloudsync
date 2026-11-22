@@ -7,7 +7,7 @@ import type { IconName } from 'obsidian';
 
 export const SYNC_RIBBON_ICON: IconName = 'refresh-cw';
 
-export const SYNC_RIBBON_LABEL = 'Sync with Nextcloud';
+export const SYNC_RIBBON_LABEL = 'Sync with OpenCloud'; // [opencloud-fork]
 
 // Kept to two members so tests can use a plain fake.
 export interface SyncRibbonHost {

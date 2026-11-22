@@ -30,7 +30,7 @@ function makeFakeHost(): {
 }
 
 describe('registerSyncRibbon (feature 060 / issue #19)', () => {
-  it('[SPEC:RIB-1] registers exactly one ribbon icon with the refresh-cw icon and "Sync with Nextcloud" label', () => {
+  it('[SPEC:RIB-1] registers exactly one ribbon icon with the refresh-cw icon and "Sync with OpenCloud" label', () => {
     const { host, calls } = makeFakeHost();
     registerSyncRibbon(host);
 
@@ -38,7 +38,7 @@ describe('registerSyncRibbon (feature 060 / issue #19)', () => {
     expect(calls[0].icon).toBe(SYNC_RIBBON_ICON);
     expect(calls[0].icon).toBe('refresh-cw');
     expect(calls[0].title).toBe(SYNC_RIBBON_LABEL);
-    expect(calls[0].title).toBe('Sync with Nextcloud');
+    expect(calls[0].title).toBe('Sync with OpenCloud');
   });
 
   it('[SPEC:RIB-2] its callback invokes runSyncNow (shares the "Sync now" command entry point)', () => {

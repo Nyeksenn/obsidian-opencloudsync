@@ -1,3 +1,11 @@
+// [opencloud-fork] tests/a-no-nextcloud/ui/sliderLimits.test.ts reads specs/main/desktop/settings.html, a mockup from
+// upstream's private (gitignored) specs/ folder. Without that file the whole suite crashes at load, so it is skipped
+// only while the file is absent; where it exists (upstream's own checkout) the suite runs as before.
+const { existsSync } = require('fs');
+const forkSkips = existsSync(`${__dirname}/specs/main/desktop/settings.html`)
+  ? []
+  : ['/tests/a-no-nextcloud/ui/sliderLimits.test.ts'];
+
 /** @type {import('jest').Config} */
 // Classification "a" (Nextcloud-independent, no UI). This is the DEFAULT `pnpm test`
 // and the only suite that runs in CI: pure logic + the spec-coverage meta-test.
@@ -20,6 +28,7 @@ module.exports = {
     '/tests/b2-nextcloud-ui/',
     '/tests/b3-android-ui/',
     '/tests/b4-plain-webdav/',
+    ...forkSkips,
   ],
   modulePathIgnorePatterns: [
     '<rootDir>/tests/b1-nextcloud-headless/',

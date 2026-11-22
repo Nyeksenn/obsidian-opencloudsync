@@ -66,7 +66,7 @@ describe('[SPEC:MDV-5] breaker report notes are excluded from sync (feature 056)
   });
 
   it('does not exclude an ordinary vault file with a similar-looking name', () => {
-    expect(isSystemExcluded('nextcloud-sync-dir-breaker-report-old.md')).toBe(false);
-    expect(isSystemExcluded('notes/nextcloud-sync-dir-breaker-report.md')).toBe(false);
+    expect(isSystemExcluded('opencloud-sync-dir-breaker-report-old.md')).toBe(false);
+    expect(isSystemExcluded('notes/opencloud-sync-dir-breaker-report.md')).toBe(false);
   });
 });

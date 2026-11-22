@@ -11,13 +11,14 @@ import {
   type NumberSliderOptions,
   type SettingDefinitionsHost,
 } from './settingDefinitions';
+import { openCloudSettingDefinitions } from '../opencloud/settingsTab'; // [opencloud-fork]
 
 // Adapter only: the rows live as data in settingDefinitions.ts because Obsidian 1.13.0 builds the settings search index
 // from getSettingDefinitions() alone. display() is not kept as a fallback: it is only called when the definitions come
 // back empty (obsidian.d.ts:6633), which minAppVersion 1.13.0 rules out.
 
 // Default secret ID in SecretStorage; users can pick another via "Link…".
-const DEFAULT_PASSWORD_SECRET_ID = 'obsidian-nextcloudsync-password';
+const DEFAULT_PASSWORD_SECRET_ID = 'opencloud-sync-app-token'; // [opencloud-fork]
 // localStorage key where older versions stored the password; read only for migration.
 const LEGACY_CREDENTIALS_KEY = 'obsidian-nextcloudsync-password';
 
@@ -45,7 +46,8 @@ export class NextcloudSyncSettingTab extends PluginSettingTab implements Setting
 
 
   getSettingDefinitions(): SettingDefinitionItem[] {
-    return buildSettingDefinitions(this);
+    // [opencloud-fork] Upstream's rows, with the OpenCloud group in place of the Nextcloud group (src/opencloud/settingsGroup.ts).
+    return openCloudSettingDefinitions(this, this.plugin, () => loadAppPassword(this.app, this.plugin.settings.passwordSecretId), buildSettingDefinitions(this));
   }
 
   // Resolved by key path (dotted keys address nested values, e.g. configSync.bookmarks) so a `key` cannot drift

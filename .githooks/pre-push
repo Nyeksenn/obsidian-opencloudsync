@@ -1,22 +1,16 @@
 #!/bin/sh
-# Release-hygiene gate for the Nextcloud Sync Obsidian plugin.
+# [opencloud-fork] Release-hygiene gate for the OpenCloud Sync Obsidian plugin.
 #
-# Runs before every `git push` (wired up via core.hooksPath, set by the package.json
-# "prepare" script on `pnpm install`). It blocks a push when:
-#   1. the Obsidian community-store linter reports errors (eslint-plugin-obsidianmd) —
-#      this is exactly what delisted the plugin from the store before;
+# Runs before every `git push` (wired up via core.hooksPath, set by the package.json "prepare" script on
+# `pnpm install`). It blocks a push when:
+#   1. the Obsidian community-store linter reports errors (eslint-plugin-obsidianmd);
 #   2. the type-check + production build fails;
-#   3. either README is out of sync with manifest.json — README.md AND README.ja.md must
-#      each name the current version in their "What's new" heading and mention the current
-#      minAppVersion, so a release can't ship with stale docs or an out-of-sync translation;
-#   4. a stable release (plain x.y.z) is missing its CHANGELOG entry — the changelog is the
-#      canonical version history, so CHANGELOG.md AND CHANGELOG.ja.md must each carry a
-#      "[x.y.z]" entry. Pre-release builds (x.y.z-beta.N) are skipped (betas aren't listed);
-#   5. the pure-logic test layer fails. It runs through tests/docker/run.sh, which records a pass
-#      together with the identity of the working tree, so a tree that already passed is not
-#      tested again (the second push of a release, or a push right after a suite run). Where the
-#      suite cannot run (no Docker, or another run holds its lock) the tests run directly.
-#      Skipped for a stable version: the beta release already gated every test layer.
+#   3. README.md does not name the manifest.json version in its
+#      "What's new" heading, or does not mention minAppVersion;
+#   4. a stable release (plain x.y.z) has no "[x.y.z]" entry in CHANGELOG.md;
+#   5. the unit tests (`pnpm test`) fail;
+#   6. the live OpenCloud tests (`pnpm test:oc`) fail. They need the local server from compose.yml; when it is not
+#      running (exit 3), they are skipped with a notice instead of blocking the push.
 #
 # Bypass in an emergency with: git push --no-verify
 set -e
@@ -32,66 +26,39 @@ pnpm build
 
 VERSION="$(node -p "require('./manifest.json').version")"
 MIN_APP="$(node -p "require('./manifest.json').minAppVersion")"
+README="README.md"
 
-# The version appears in the "What's new" heading with ASCII parens in README.md and
-# full-width parens in README.ja.md, so accept either form.
-# Full-width parentheses (U+FF08 / U+FF09) written as octal escapes so this published hook stays ASCII.
-FW_OPEN="$(printf '\357\274\210')"
-FW_CLOSE="$(printf '\357\274\211')"
-check_readme() {
-  file="$1"
-  if ! { grep -qF "($VERSION)" "$file" || grep -qF "${FW_OPEN}${VERSION}${FW_CLOSE}" "$file"; }; then
-    echo "pre-push: $file has no \"What's new\" heading for version $VERSION." >&2
-    echo "          Update its release notes to match manifest.json version $VERSION (or push with --no-verify)." >&2
-    exit 1
-  fi
-  if ! grep -qF "$MIN_APP" "$file"; then
-    echo "pre-push: $file does not mention minAppVersion $MIN_APP from manifest.json." >&2
-    echo "          Update its Requirements section (or push with --no-verify)." >&2
-    exit 1
-  fi
-}
+if ! grep -qF "($VERSION)" "$README"; then
+  echo "pre-push: $README has no \"What's new\" heading for version $VERSION." >&2
+  echo "          Update its release notes to match manifest.json version $VERSION (or push with --no-verify)." >&2
+  exit 1
+fi
+if ! grep -qF "$MIN_APP" "$README"; then
+  echo "pre-push: $README does not mention minAppVersion $MIN_APP from manifest.json." >&2
+  exit 1
+fi
 
-check_readme README.md
-check_readme README.ja.md
-
-# The changelog is the canonical version history. A stable release (plain semver) must carry
-# its entry in both CHANGELOG.md and CHANGELOG.ja.md. Beta builds (x.y.z-beta.N) are skipped:
-# betas live only in GitHub Pre-releases and are folded into the next stable changelog entry.
 case "$VERSION" in
   *-*)
-    echo "pre-push: $VERSION is a pre-release — skipping CHANGELOG check."
+    echo "pre-push: $VERSION is a pre-release — skipping the CHANGELOG check."
     ;;
   *)
-    for changelog in CHANGELOG.md CHANGELOG.ja.md; do
-      if ! grep -qF "[$VERSION]" "$changelog"; then
-        echo "pre-push: $changelog has no entry for stable version $VERSION." >&2
-        echo "          Add a '## [$VERSION] - YYYY-MM-DD' section and a '[$VERSION]: …' link (or push with --no-verify)." >&2
-        exit 1
-      fi
-    done
-    echo "pre-push: CHANGELOG entries for $VERSION present."
+    if ! grep -qF "[$VERSION]" CHANGELOG.md; then
+      echo "pre-push: CHANGELOG.md has no entry for stable version $VERSION." >&2
+      echo "          Add a '## [$VERSION] - YYYY-MM-DD' section and a '[$VERSION]: …' link (or push with --no-verify)." >&2
+      exit 1
+    fi
     ;;
 esac
 
-case "$VERSION" in
-  *-*)
-    echo "pre-push: test suite…"
-    rc=0
-    bash tests/docker/run.sh --changed a || rc=$?
-    case "$rc" in
-      0) ;;
-      2|3)
-        # Not a verdict on the code: the suite could not prepare or start.
-        echo "pre-push: the Docker suite could not run (exit $rc) — running the tests directly."
-        pnpm test
-        ;;
-      *) exit "$rc" ;;
-    esac
-    echo "pre-push: lint, build, README/README.ja sync, CHANGELOG sync, and tests passed."
-    ;;
-  *)
-    echo "pre-push: $VERSION is a stable release — tests were gated at the beta release; skipping the test suite."
-    echo "pre-push: lint, build, README/README.ja sync, and CHANGELOG sync passed."
-    ;;
+echo "pre-push: unit tests…"
+pnpm test
+
+echo "pre-push: live OpenCloud tests…"
+rc=0
+bash tests/opencloud-live/run.sh || rc=$?
+case "$rc" in
+  0) echo "pre-push: lint, build, README, CHANGELOG, unit and live tests passed." ;;
+  3) echo "pre-push: live OpenCloud tests SKIPPED — no local server (start it with: podman-compose up -d)." ;;
+  *) exit "$rc" ;;
 esac
