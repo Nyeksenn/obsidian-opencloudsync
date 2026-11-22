@@ -110,7 +110,7 @@ Conventions:
 - Lint mirrors the community-directory reviewer: every `eslint-disable` needs a `-- reason`; `createDiv`/`createSpan`,
   not `createEl('div'|'span')`; no `any`; sentence case in UI text.
 - TypeScript held at 6.0.x and `@wdio/*` at 9.31.6 (docs/spec.md §20); caret ranges, real pinning in `pnpm-lock.yaml`.
-- Releases: push a bare version tag equal to `manifest.json` version (`0.1.0-beta.1`, no `v`);
+- Releases: push a bare version tag equal to `manifest.json` version (`0.1.0`, no `v`); the community directory reads `manifest.json` from the default branch and needs plain `x.y.z`;
   `.github/workflows/release.yml` builds and attaches `main.js`, `manifest.json`, `styles.css`.
 - Upstream merges: `git fetch upstream && git merge upstream/main` (remote: `siosig/obsidian-nextcloudsync`); once per
   clone `git config merge.ours.driver true` for `.gitattributes`. Then build, lint, `pnpm test`, `pnpm test:oc`.

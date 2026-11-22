@@ -4,7 +4,9 @@ Release history of this fork. Upstream's history (Nextcloud Sync 1.0.18 and earl
 uses unchanged) is in the [upstream changelog](https://github.com/siosig/obsidian-nextcloudsync/blob/main/CHANGELOG.md).
 Stable releases need an entry here (checked by `.githooks/pre-push`); pre-releases are folded into the next stable entry.
 
-## [Unreleased]
+## [0.1.0] - 2026-11-22
+
+First release of the OpenCloud fork, based on Nextcloud Sync 1.0.18.
 
 ### Added
 
@@ -25,4 +27,4 @@ Stable releases need an entry here (checked by `.githooks/pre-push`); pre-releas
 - README and CHANGELOG are the fork's own; the Japanese translations were removed.
 - Plugin id `opencloud-sync`, name "OpenCloud Sync". The engine's content digest is SHA-1 (OpenCloud has no SHA-256).
 
-[Unreleased]: https://github.com/Nyeksenn/obsidian-opencloudsync/commits/feature/opencloud-rework
+[0.1.0]: https://github.com/Nyeksenn/obsidian-opencloudsync/releases/tag/0.1.0

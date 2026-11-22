@@ -8,10 +8,10 @@ engine — three-way merge of concurrent edits, conflict handling that never dro
 rename detection, sync on file change — is upstream's, unchanged. What this fork replaces is the server side: it talks to
 OpenCloud's own APIs (spaces, SHA-1 checksums, TUS uploads, version history) instead of Nextcloud's.
 
-> **Status: beta.** It works end to end against OpenCloud 9.x and is covered by unit tests and a live test suite, but it
-> has not had wide real-world use yet. Keep a backup of your vault.
+> **Early release.** It works end to end against OpenCloud 9.x and is covered by unit tests and a live test suite, but
+> it has not had wide real-world use yet. Keep a backup of your vault.
 
-## What's new (0.1.0-beta.1)
+## What's new (0.1.0)
 
 First release of the OpenCloud fork:
 
@@ -33,9 +33,10 @@ First release of the OpenCloud fork:
    page. Otherwise ask your administrator, who can create one with
    `opencloud auth-app create --user-name=<you> --expiration=8760h`. Tokens can expire; when one does, sync fails with
    HTTP 401 until you link a new one.
-2. **Install the plugin.** Until it is in the community plugin browser, install it with
-   [BRAT](https://github.com/TfTHacker/obsidian42-brat) from this repository, or copy `main.js`, `manifest.json` and
-   `styles.css` from a release into `<vault>/.obsidian/plugins/opencloud-sync/`.
+2. **Install the plugin.** In Obsidian, open *Settings → Community plugins → Browse*, search for **OpenCloud Sync**,
+   install and enable it. To install by hand instead, copy `main.js`, `manifest.json` and `styles.css` from a
+   [release](https://github.com/Nyeksenn/obsidian-opencloudsync/releases) into
+   `<vault>/.obsidian/plugins/opencloud-sync/`.
 3. **Open Settings → OpenCloud Sync** and fill in the *OpenCloud* section:
    - **Server URL** — e.g. `https://cloud.example.com` (a pasted web or WebDAV address is trimmed to this);
    - **Username**;
@@ -61,6 +62,22 @@ compares the whole vault with the new target. No files are deleted locally or on
 - Deleting many files at once stops and asks first (mass-delete safety check).
 
 Details for developers: [`docs/opencloud.md`](docs/opencloud.md).
+
+## Privacy and network use
+
+- **Account required.** The plugin needs an account on an OpenCloud server that you or your organisation run, and an app
+  token for it. The plugin itself is free; it requires no payment and shows no ads.
+- **Network use.** The plugin connects only to the OpenCloud server whose URL you enter, to sync your files: it lists
+  your spaces (`/graph/v1.0/me/drives`), reads the server's capabilities and status, and reads and writes files, versions
+  and uploads in the space you choose (WebDAV under `/dav/`). It contacts no other service.
+- **No telemetry.** Nothing about you or your usage is collected or sent anywhere. The optional debug log
+  (*Enable logging*, off by default) is a local file in your vault; the device's current log is excluded from sync.
+  Delete old log files (`opencloud-debug_*.txt`) yourself if you do not want them synced like other vault files.
+- **Files.** The plugin reads and writes only inside your vault: your notes and, if you enable *Sync config folder*,
+  parts of the vault's configuration folder. Its own state lives in the plugin folder (`.obsidian/plugins/opencloud-sync/`).
+  The app token is kept in Obsidian's Secret Storage, not in plain text.
+- **Open source.** All code is in this repository under the MIT license; bundled third-party code is listed in
+  [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## FAQ
 

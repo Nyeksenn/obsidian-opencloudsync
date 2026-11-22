@@ -1,6 +1,6 @@
 {
   "name": "obsidian-opencloudsync",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0",
   "description": "Bidirectional sync between Obsidian and an OpenCloud space",
   "main": "main.js",
   "packageManager": "pnpm@12.15.0",
