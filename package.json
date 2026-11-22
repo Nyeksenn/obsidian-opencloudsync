@@ -15,7 +15,8 @@
     "test:b1": "jest --config jest.b1.config.js",
     "test:b2": "wdio run wdio.conf.mts",
     "test:b3": "wdio run wdio.android.conf.mts",
-    "test:b4": "jest --config jest.b4.config.js --runInBand"
+    "test:b4": "jest --config jest.b4.config.js --runInBand",
+    "test:oc": "bash tests/opencloud-live/run.sh"
   },
   "keywords": [
     "obsidian",
