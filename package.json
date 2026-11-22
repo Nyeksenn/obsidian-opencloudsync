@@ -25,6 +25,9 @@
     "webdav"
   ],
   "author": "Clemens Albrecht",
+  "contributors": [
+    "Daisuke ITO (original Nextcloud Sync plugin)"
+  ],
   "license": "MIT",
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
@@ -59,8 +62,5 @@
     "node-diff3": "^3.2.1",
     "reconcile-text": "^0.13.2",
     "semver": "^7.8.5"
-  },
-  "contributors": [
-    "Daisuke ITO (original Nextcloud Sync plugin)"
-  ]
+  }
 }
