@@ -1,9 +1,9 @@
 {
-  "id": "nextcloud-sync",
-  "name": "Nextcloud Sync",
-  "version": "1.0.18",
+  "id": "opencloud-sync",
+  "name": "OpenCloud Sync",
+  "version": "0.1.0-beta.1",
   "minAppVersion": "1.13.0",
-  "description": "Bidirectional sync between your Vault and Nextcloud using hash-based change detection.",
-  "author": "Daisuke ITO",
+  "description": "Bidirectional sync between your vault and a space on an OpenCloud server.",
+  "author": "Clemens Albrecht",
   "isDesktopOnly": false
 }

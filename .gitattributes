@@ -1,0 +1,4 @@
+# [opencloud-fork] Files this fork owns outright: on an upstream merge, keep ours.
+# Needs once per clone: git config merge.ours.driver true
+manifest.json merge=ours
+versions.json merge=ours

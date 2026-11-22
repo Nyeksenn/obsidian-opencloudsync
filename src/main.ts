@@ -71,7 +71,7 @@ export default class ObsidianNextcloudsync extends Plugin {
     const currentVersion = (this.app as App & { appVersion?: string }).appVersion ?? '';
     if (currentVersion && this.compareVersions(currentVersion, MIN_OBSIDIAN_VERSION) < 0) {
       new Notice(
-        `Nextcloud Sync requires Obsidian ${MIN_OBSIDIAN_VERSION} or later. Current: ${currentVersion}`,
+        `OpenCloud Sync requires Obsidian ${MIN_OBSIDIAN_VERSION} or later. Current: ${currentVersion}`,
         0,
       );
       return;
@@ -98,7 +98,7 @@ export default class ObsidianNextcloudsync extends Plugin {
       this.manifest.version,
       this.hostToken(),
       () => debugLogPath(this.settings.logsFolder, this.hostToken()),
-      (err) => new Notice(`Nextcloud Sync: could not write the log file — ${(err as Error)?.message ?? String(err)}`, 8000),
+      (err) => new Notice(`OpenCloud Sync: could not write the log file — ${(err as Error)?.message ?? String(err)}`, 8000),
     );
     void this.logger.log(`plugin loaded (obsidian=${currentVersion})`);
     void this.logSettingsSnapshot();
@@ -357,7 +357,7 @@ export default class ObsidianNextcloudsync extends Plugin {
   async runRemoteMirror(): Promise<void> {
     const engine = this.syncEngine;
     if (!engine) {
-      new Notice('Sign in to Nextcloud before mirroring from the remote.', 6000);
+      new Notice('Connect to OpenCloud and choose a space before mirroring from the remote.', 6000); // [opencloud-fork]
       return;
     }
     if (this.mirrorInProgress) return;

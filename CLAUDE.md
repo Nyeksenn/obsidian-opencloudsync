@@ -4,15 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project context
 
-An Obsidian community plugin for bidirectional Vault sync over WebDAV. The code base is a fork of
-`siosig/obsidian-nextcloudsync` ("Nextcloud Sync", plugin id `nextcloud-sync`); this repo
-(`Nyeksenn/obsidian-opencloudsync`) is reworking it for OpenCloud on the `feature/opencloud-rework` branch.
-Names, docs, tests and hooks still say "Nextcloud" throughout — treat that as inherited, not as the target.
+"OpenCloud Sync" (plugin id `opencloud-sync`): an Obsidian plugin that syncs a vault with a **space on an OpenCloud
+server**. It is a fork of `siosig/obsidian-nextcloudsync` ("Nextcloud Sync"). The fork keeps upstream's sync engine
+**unmodified** and replaces only the server side, so that upstream improvements keep merging in. That constraint shapes
+every change; read "Fork rules" below before editing anything outside `src/opencloud/`.
 
-The plugin talks to the server through `IWebDAVClient`, which has two implementations:
-`NextcloudClient` (Nextcloud extensions: `oc:checksums`, file IDs, sync-token REPORT, chunked upload,
-LOCK, versions, OCS capabilities, Login Flow v2) and `StandardWebDAVClient` (plain WebDAV fallback,
-`Depth: 1` recursion). `WebDAVFactory` picks one from capability detection.
+- Fork specification, server behaviour, merge workflow: `docs/opencloud.md` (read this first).
+- Upstream's behavioural spec and design: `docs/spec.md`, `docs/plan.md`. They say "Nextcloud"; `docs/opencloud.md`
+  says what differs.
+- User docs: `.github/README.md` (the fork's README; the root `README.md` is upstream's, pinned by upstream tests).
+
+## Fork rules
+
+1. **Don't edit upstream-owned code**: `src/sync/**`, `src/data/**`, `src/network/**`, `src/util/**` (except
+   `hash.ts`), `src/ui/**`, `docs/spec.md`, `docs/plan.md`, root `README*.md` / `CHANGELOG*.md`, and every existing test
+   (`tests/a-no-nextcloud/**` outside `opencloud/`, `tests/b*`, `tests/docker/`). No renames, moves or reformatting.
+2. **Fork code lives in new files**: `src/opencloud/**`, `tests/a-no-nextcloud/opencloud/**`, `tests/opencloud-live/**`,
+   `docs/opencloud.md`, `.github/README.md`, `CHANGELOG.opencloud.md`.
+3. **Unavoidable edits to shared files are marked `[opencloud-fork]`** and kept to a few lines: `src/main.ts`,
+   `src/settings/SettingTab.ts`, `src/util/hash.ts`, `src/ui/StatusBarItem.ts`, `jest.config.js`, `.githooks/*`.
+   Check with `git diff 21f8902 --stat -- src` (21f8902 = upstream 1.0.18): the engine must show no changes.
+4. Prefer **wrapping over editing**: e.g. settings rows are built by upstream's `buildSettingDefinitions()` and then
+   transformed by `src/opencloud/settingsGroup.ts`; `OpenCloudFactory` *extends* `WebDAVFactory`.
+5. Upstream tests pin some files and strings (settings rows and `DEFAULT_SETTINGS` keys, README sections, the ribbon
+   label). If a change would break one, find a fork-side way instead of editing the test.
 
 ## Commands
 
@@ -20,91 +35,76 @@ pnpm is required (version pinned by `packageManager` in `package.json`, Node 26)
 
 ```bash
 pnpm install                 # also sets core.hooksPath=.githooks via "prepare"
-pnpm dev                     # esbuild watch build -> ./main.js (OUTDIR=<vault>/.obsidian/plugins/<id> to build straight into a vault; copies manifest.json + styles.css)
+pnpm dev                     # esbuild watch build -> ./main.js (OUTDIR=<vault>/.obsidian/plugins/opencloud-sync to build into a vault)
 pnpm build                   # tsc --noEmit + production bundle
 pnpm lint                    # eslint src (mirrors the Obsidian community-directory reviewer)
-pnpm test                    # layer "a": pure-logic Jest suite (the only layer CI runs)
-pnpm test tests/a-no-nextcloud/sync/cleanSideSnapshot.test.ts   # single file
-pnpm test -t 'CSS-12'        # single test by name / spec tag
+pnpm test                    # layer "a": upstream's unit suite + the fork's (tests/a-no-nextcloud/opencloud/)
+pnpm test tests/a-no-nextcloud/opencloud/openCloudClient.test.ts   # single file
+pnpm test -t 'TUS'           # single test by name
+pnpm test:oc                 # live OpenCloud layer (needs the dev server below); exits 3 if it is not running
 ```
 
-Local OpenCloud dev server (rootless Podman): `podman-compose up -d` using `compose.yml`, then
-`https://localhost:8080` with **admin / admin** (self-signed TLS, WebDAV root
-`https://localhost:8080/remote.php/dav/files/admin/`). Details and caveats: `docs/local-opencloud.md`.
+Local OpenCloud dev server (rootless Podman, `compose.yml`): `podman-compose up -d`, web UI `https://localhost:8080`
+as **admin / admin**. Sync needs an app token, not the password:
+`podman exec opencloud-dev opencloud auth-app create --user-name=admin --expiration=720h`. Details: `docs/local-opencloud.md`.
 
-Live layers run only through Docker (`tests/docker/run.sh`, see `tests/README.md` for host prerequisites
-and exit codes):
-
-```bash
-bash tests/docker/run.sh <a|b1|b2|b3|b4|all>   # b1 live Nextcloud headless, b2 desktop Obsidian UI (wdio),
-                                               # b3 Android/Redroid (needs binder + AppArmor profile), b4 plain WebDAV (Apache mod_dav)
-bash tests/docker/run.sh --changed <layer>     # skip a layer that already passed on this exact working tree
-```
-
-Jest configs: `jest.config.js` (a, excludes all b* dirs), `jest.b1.config.js` (`*.b1.test.ts`),
-`jest.b4.config.js` (`*.b4.test.ts`); b2/b3 use `wdio.conf.mts` / `wdio.android.conf.mts`. Each layer maps
-`obsidian` to its own mock (`tests/a-no-nextcloud/support/obsidian.ts`, `tests/*/__mocks__/obsidian.ts`).
-
-## Spec-driven workflow
-
-- `docs/spec.md` is the behavioural source of truth (clauses with IDs like `CSS-1`, `WSF-3`, `CTE-7`);
-  `docs/plan.md` is the implementation design (components, orchestration, module boundaries).
-- Tests cite clauses only via a `[SPEC:<id>]` tag in the `describe`/`it` title (or the `spec()` helper in
-  `tests/a-no-nextcloud/support/specRef.ts`). Skipped tests do not count.
-- `tests/a-no-nextcloud/spec-coverage/clauses.ts` is the clause catalog; `coverage.test.ts` fails when a
-  clause has no test. `docsReferences.test.ts` checks that every `docs/spec.md §…` / `docs/plan.md §…`
-  reference in a code comment points at a real heading, and that comments carry no feature-number history.
-- When behaviour changes: update `docs/spec.md`, update `clauses.ts`, add/adjust tagged tests, make `pnpm test` green.
-- Clause tags live on `SyncEngine`-level tests; directly tested extracted modules (e.g. `sync/policy/`, `sync/scan/`)
-  carry no tags, to avoid double-counting.
+Upstream's live layers (`bash tests/docker/run.sh <b1|b2|b3|b4>`, Docker, see `tests/README.md`) target Nextcloud /
+plain WebDAV and are not part of the fork's gate; they matter only when an upstream merge touches shared helpers.
 
 ## Architecture
 
-`src/main.ts` is the plugin host: init, DI, lifecycle, commands, triggers (manual / interval / startup /
-foreground resume / Vault watch events).
+- `src/main.ts` — plugin host: init, DI, lifecycle, commands, triggers. Fork edits: `setContentDigest('SHA-1')` at load,
+  loads `ForkSettingsStore` (`opencloud.json`), builds `OpenCloudFactory`.
+- `src/sync/SyncEngine.ts` (upstream) — composition root and core loop: `runSyncSession` → `ensureClient` →
+  `initialSync` | `incrementalSync`; three-point comparison (local / remote / last-synced state) and the per-file
+  decision. Extracted modules under `src/sync/` (`transfer/`, `deletion/`, `directory/`, `mirror/`, `conflict/`, …)
+  follow docs/plan.md §17.1. The engine reaches the server **only** through `IWebDAVClient`
+  (`src/network/IWebDAVClient.ts`) and the `NextcloudFeatures` flags.
+- `src/opencloud/` (fork):
+  - `OpenCloudClient.ts` implements `IWebDAVClient` for one space. Depth-1 listing walk (OpenCloud refuses
+    `Depth: infinity`), SHA-1 checksums, TUS for `uploadChunked`, versions under `/dav/meta/<fileid>/v`, restore by
+    `COPY` onto `/dav/spaces/<fileid>`. `connect()` sets `isNextcloud: true` / `hasAccountDav: true` (meaning "extended
+    protocol") and refuses a missing space (`SpaceNotFoundError`), since an empty listing would read as "delete everything".
+  - `OpenCloudFactory.ts` extends upstream's `WebDAVFactory` (the engine is typed against that class); guards: token,
+    space chosen, space chosen on the current server, SHA-1 digest active.
+  - `spaces.ts` (Graph `me/drives`), `serverUrl.ts` (normalise to the server root), `forkSettings.ts` (space choice in
+    `opencloud.json`, not `data.json`, because upstream tests pin `DEFAULT_SETTINGS`' keys), `errors.ts`.
+  - `settingsGroup.ts` / `settingsTab.ts` — replace upstream's "Nextcloud" settings group with the OpenCloud group
+    (server URL, username, app token, Connect, space picker, folder in space). Changing the target confirms and resets
+    the tracking state (`syncEngine.resetIndex()`).
+- `src/util/hash.ts` — `sha256()` hashes with a switchable digest (default SHA-256 for upstream's tests; the fork sets
+  SHA-1 to match OpenCloud's checksums). State records keep the label `idType: 'sha256'`.
+- Upstream's `NextcloudClient`, `StandardWebDAVClient` and `LoginFlowV2` stay in the tree, never constructed.
 
-`src/sync/SyncEngine.ts` is the composition root and the core loop: session lifetime
-(`runSyncSession` → `ensureClient` → `initialSync` | `incrementalSync`, `finally` persists StateDB),
-the three-point comparison (local / remote / last-synced state), per-file decision (`processFile`) and
-~60 thin delegations to extracted modules. Only one full session runs at a time (balking guard on `running`);
-watch operations arriving mid-session are queued in a pending set.
+## Tests
 
-Extracted modules under `src/sync/` each own one concern (`transfer/`, `deletion/`, `directory/`, `mirror/`,
-`conflict/`, `resolution/`, `scan/`, `session/`, `watch/`, `ctime/`, `plugins/`, `versions/`, `identity/`) and
-follow these conventions (plan.md §17.1):
+- `tests/a-no-nextcloud/opencloud/` — fork unit tests (client request shapes against the `requestUrl` mock, factory
+  guards, settings swap over upstream's real `buildSettingDefinitions()`). They carry no `[SPEC:…]` tags, so upstream's
+  clause catalog (`tests/a-no-nextcloud/spec-coverage/clauses.ts`) stays untouched.
+- `tests/opencloud-live/` (`jest.opencloud.config.js`, run via `run.sh`) — client contract and two-device engine tests
+  against the dev server. Reuses upstream's live `obsidian` mock and `FakeVault` from `tests/b1-nextcloud-headless/`.
+  Each run gets a fresh project space and trusts the server certificate via `NODE_EXTRA_CA_CERTS` (checks stay on).
+- Upstream's spec-driven rules still apply to upstream code: `docs/spec.md` clauses, `[SPEC:<id>]` tags, `clauses.ts`,
+  `coverage.test.ts`, and `docsReferences.test.ts` (every `docs/spec.md §…` reference in a comment must exist).
+- `jest.config.js` skips upstream's `sliderLimits.test.ts` while its private `specs/` mockup is absent.
 
-- Never import `SyncEngineOptions`; declare the minimal interface needed.
-- Receive `IWebDAVClient` / `IUploadStrategy` as call arguments, never store them (the client is created lazily and can be replaced).
-- Values that change over the engine lifetime (settings, `isNextcloud`, times, `isCancelled`) are passed as accessors; lazy evaluation is intentional.
-- Mutable state lives with its owner (e.g. held locks in `TransferService`, in-flight/pending sets in `WatchOperations`, run start time in `SyncJournal`); core-loop state stays in `SyncEngine`.
-- Outward effects go through injected function ports. Only `watch/` calls back into the engine, via the injected `processFile` port — watch decides nothing itself.
-- Decision vs. execution are split: pure deciders (`ConflictResolver`, `sync/policy/`, `directory/classify.ts`,
-  `mirror/convergence.ts`, `util/creationTime.ts`, `network/dav/` PROPFIND parsers, most of `sync/plugins/`) and
-  executors (`ConflictApplier`, `CreationTimeAligner`, services).
-
-Other layers:
-
-- `src/network/` — clients, `serverUrl.ts` (URL parsing, public-share detection), `certTrust.ts`, timeouts/retry. Clients read the app password on every request via an `AppPasswordReader`.
-- `src/data/` — `LocalAdapter` (Obsidian DataAdapter + Vault cache, atomic writes), `StateDB` (per-device per-path `FileState`, fileId index, sync token), `MergeBaseStore` (3-way merge bases), `SyncHistoryStore`, `CleanSideStore`.
-- `src/sync/merge/` — `MergeEngine` tries `ReconcileTextStrategy` then `Diff3Strategy`; frontmatter has its own strategy. Conflicts are always settled (no "hold" state).
-- `src/settings/` — `settingDefinitions.ts` drives the settings tab; `util/fixedSyncConfig.ts` holds non-UI fixed values; `util/limits.ts` holds tuning constants; `util/settingsMigration.ts` migrates stored settings.
-- `src/ui/` — modals, status bar, ribbon.
-
-## Repo rules enforced by hooks
+## Hooks and conventions
 
 `.githooks/` (installed by `pnpm install`):
 
-- **commit-msg**: commit messages must contain no Japanese/CJK characters.
-- **pre-commit**: secretlint on staged files (uses gitignored `.secretlintrc.local.json` if present); no CJK in staged
-  files except `*.ja*`; **author email must be the upstream author's (`siosig@…`)** — this gate is inherited from
-  upstream and will reject commits from this fork's author until it is changed or bypassed with `--no-verify`.
-- **pre-push**: `pnpm lint`, `pnpm build`, README.md and README.ja.md must both name the `manifest.json` version in their
-  "What's new" heading and mention `minAppVersion`; stable versions need `[x.y.z]` entries in CHANGELOG.md and
-  CHANGELOG.ja.md; pre-release versions run `tests/docker/run.sh --changed a` (falls back to `pnpm test`).
+- **commit-msg**: no Japanese/CJK in commit messages.
+- **pre-commit**: secretlint on staged files; no CJK in staged files except `*.ja*`. (Upstream's author-email gate is removed.)
+- **pre-push**: lint, build, `.github/README.md` names the `manifest.json` version in a "What's new (x.y.z)" heading
+  and mentions `minAppVersion`; stable versions need `[x.y.z]` in `CHANGELOG.opencloud.md`; `pnpm test`; `pnpm test:oc`
+  (skipped with a notice when no dev server runs).
 
-Other conventions:
+Conventions:
 
-- English for code, comments, commit messages and docs; Japanese only in `*.ja.md` mirrors (keep them in sync with the English files).
-- Lint mirrors the community-directory reviewer: every `eslint-disable` needs a `-- reason`; use `createDiv`/`createSpan`, not `createEl('div'|'span')`; no `any`.
-- TypeScript is held at 6.0.x and `@wdio/*` at 9.31.6 (spec §20 explains why); all dependency specifiers are caret ranges, real pinning is `pnpm-lock.yaml`; don't add `js-yaml` (frontmatter is parsed via the Obsidian API).
-- Releases: push a bare version tag (`1.2.3`, no `v`) equal to `manifest.json` version; `.github/workflows/release.yml` builds and attaches `main.js`, `manifest.json`, `styles.css`. Betas (`x.y.z-beta.N`) must pass `bash tests/docker/run.sh --changed all` first.
+- English for code, comments, commit messages and docs.
+- Lint mirrors the community-directory reviewer: every `eslint-disable` needs a `-- reason`; `createDiv`/`createSpan`,
+  not `createEl('div'|'span')`; no `any`; sentence case in UI text.
+- TypeScript held at 6.0.x and `@wdio/*` at 9.31.6 (docs/spec.md §20); caret ranges, real pinning in `pnpm-lock.yaml`.
+- Releases: push a bare version tag equal to `manifest.json` version (`0.1.0-beta.1`, no `v`);
+  `.github/workflows/release.yml` builds and attaches `main.js`, `manifest.json`, `styles.css`.
+- Upstream merges: `git fetch upstream && git merge upstream/main` (remote: `siosig/obsidian-nextcloudsync`); once per
+  clone `git config merge.ours.driver true` for `.gitattributes`. Then build, lint, `pnpm test`, `pnpm test:oc`.

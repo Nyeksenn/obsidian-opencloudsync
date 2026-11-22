@@ -121,4 +121,22 @@ Rules that keep this cheap:
    stay in the tree, never constructed, so upstream fixes to them still merge. They are still bundled into `main.js` (`WebDAVFactory` and the settings tab import them), which costs bundle size, not behaviour.
 2. Fork code lives in new files: `src/opencloud/**`, `tests/a-no-nextcloud/opencloud/**`, `tests/opencloud-live/**`.
 3. The few edits to shared files are marked `[opencloud-fork]`.
-4. Files the fork owns completely (README, CHANGELOG, `manifest.json`, `versions.json`) resolve as "ours" via `.gitattributes`.
+4. `manifest.json` and `versions.json` are the fork's and resolve as "ours" via `.gitattributes` (needs
+   `git config merge.ours.driver true`). `package.json` is deliberately not on that list, so upstream's dependency
+   bumps still merge; expect a small conflict on its name/version/author lines.
+5. The fork's README is `.github/README.md` (GitHub shows it in preference to the root file) and its changelog is
+   `CHANGELOG.opencloud.md`. The root `README.md`, `README.ja.md`, `CHANGELOG.md` and `CHANGELOG.ja.md` stay
+   upstream's: upstream tests read the READMEs (settings-defaults table, certificate FAQ, subfolder/409 note).
+   Obsidian's community plugin browser reads the root `README.md`, so before a store submission that file must become
+   the fork's, and those upstream tests then need a fork-side answer.
+6. `jest.config.js` skips `tests/a-no-nextcloud/ui/sliderLimits.test.ts` while upstream's private
+   `specs/main/desktop/settings.html` is absent (it is gitignored upstream), so `pnpm test` can pass in this repo.
+7. User-visible strings inherited from upstream that still say "Nextcloud" and are pinned by upstream tests stay as
+   they are: the ribbon tooltip ("Sync with Nextcloud"), the debug-log header and the mass-delete report headings.
+
+Known gaps in upstream code noticed while building the fork (candidates to report upstream):
+
+- `hrefToRelative` (`src/network/remotePath.ts`) keeps an href outside the base URL and relies on the sync-folder
+  prefix to drop it; with an empty sync folder such an href becomes a vault path. The fork checks the base path first.
+- `MergeEngine.merge` appends a blank line for base `"line 1..5\n"` with line 1 edited on one side and line 5 on the
+  other (reproducible without any server).
