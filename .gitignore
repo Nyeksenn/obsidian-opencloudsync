@@ -40,6 +40,7 @@ report/
 /docs/*
 !/docs/spec.md
 !/docs/plan.md
+!/docs/local-opencloud.md
 scripts/
 
 # TypeScript incremental build info

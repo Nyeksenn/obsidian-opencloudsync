@@ -28,6 +28,10 @@ pnpm test tests/a-no-nextcloud/sync/cleanSideSnapshot.test.ts   # single file
 pnpm test -t 'CSS-12'        # single test by name / spec tag
 ```
 
+Local OpenCloud dev server (rootless Podman): `podman-compose up -d` using `compose.yml`, then
+`https://localhost:8080` with **admin / admin** (self-signed TLS, WebDAV root
+`https://localhost:8080/remote.php/dav/files/admin/`). Details and caveats: `docs/local-opencloud.md`.
+
 Live layers run only through Docker (`tests/docker/run.sh`, see `tests/README.md` for host prerequisites
 and exit codes):
 
