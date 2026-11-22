@@ -37,6 +37,12 @@ First release of the OpenCloud fork:
    install and enable it. To install by hand instead, copy `main.js`, `manifest.json` and `styles.css` from a
    [release](https://github.com/Nyeksenn/obsidian-opencloudsync/releases) into
    `<vault>/.obsidian/plugins/opencloud-sync/`.
+
+   **With BRAT** (if the plugin is not yet listed in the community directory, or to get updates automatically):
+   install and enable the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin from *Community plugins*, then
+   run the command *BRAT: Add a beta plugin for testing*, enter `https://github.com/Nyeksenn/obsidian-opencloudsync`,
+   pick the latest version and confirm. BRAT installs the release files and keeps the plugin up to date. Then enable
+   **OpenCloud Sync** under *Settings → Community plugins*.
 3. **Open Settings → OpenCloud Sync** and fill in the *OpenCloud* section:
    - **Server URL** — e.g. `https://cloud.example.com` (a pasted web or WebDAV address is trimmed to this);
    - **Username**;
