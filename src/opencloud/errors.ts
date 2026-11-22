@@ -10,6 +10,14 @@ export class SpaceNotSelectedError extends Error {
   }
 }
 
+/** The Server URL was changed after the space was chosen; the space belongs to the old server. */
+export class ServerChangedError extends Error {
+  constructor() {
+    super('The Server URL changed since the space was chosen. Press "Connect" in the plugin settings and choose a space on the new server.');
+    this.name = 'ServerChangedError';
+  }
+}
+
 /**
  * The chosen space is no longer listed for this user (deleted, disabled, or access removed). Raised by connect() so the
  * engine never receives an empty listing for it: an empty listing reads as "everything was deleted".

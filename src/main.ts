@@ -24,6 +24,8 @@ import { applyPluginSelection, type PluginSelectionConfirmStep } from './ui/plug
 import { collectCommunityPluginCandidates, type PluginCandidateList } from './sync/plugins/candidates';
 import { debugLogPath, isActiveOwnLog } from './util/logPaths';
 import { autoNetworkConcurrency } from './util/platformDefaults';
+import { setContentDigest } from './util/hash'; // [opencloud-fork]
+import { ForkSettingsStore } from './opencloud/forkSettings'; // [opencloud-fork]
 
 const MIN_OBSIDIAN_VERSION = '1.13.0';
 
@@ -34,6 +36,8 @@ const EDIT_WINDOW_MS = 2000;
 
 export default class ObsidianNextcloudsync extends Plugin {
   settings!: DavSyncSettings;
+  // [opencloud-fork] The chosen space (opencloud.json), kept apart from data.json (docs/opencloud.md).
+  ocSpace!: ForkSettingsStore;
   syncEngine?: SyncEngine;
 
   // Guards against double-invocation of the Pull-mirror.
@@ -62,6 +66,8 @@ export default class ObsidianNextcloudsync extends Plugin {
   private readonly pluginsAwaitingRestart = new Set<string>();
 
   async onload(): Promise<void> {
+    // [opencloud-fork] The engine's content hash must match OpenCloud's checksum algorithm; set before anything is hashed.
+    setContentDigest('SHA-1');
     const currentVersion = (this.app as App & { appVersion?: string }).appVersion ?? '';
     if (currentVersion && this.compareVersions(currentVersion, MIN_OBSIDIAN_VERSION) < 0) {
       new Notice(
@@ -72,6 +78,9 @@ export default class ObsidianNextcloudsync extends Plugin {
     }
 
     await this.loadSettings();
+    // [opencloud-fork]
+    this.ocSpace = new ForkSettingsStore(this.app.vault.adapter, `${this.app.vault.configDir}/plugins/${this.manifest.id}`);
+    await this.ocSpace.load();
 
     this.statusFilterState.checked = deserializeFilter(this.settings.statusFilter).checked;
 
@@ -525,7 +534,7 @@ export default class ObsidianNextcloudsync extends Plugin {
     const { SyncHistoryStore } = await import('./data/SyncHistoryStore');
     const { StatusBarItem } = await import('./ui/StatusBarItem');
     const { NoticeStatusBar } = await import('./ui/NoticeStatusBar');
-    const { WebDAVFactory } = await import('./network/WebDAVFactory');
+    const { OpenCloudFactory } = await import('./opencloud/OpenCloudFactory'); // [opencloud-fork]
     const { loadAppPassword } = await import('./settings/SettingTab');
 
     const pluginDir = `${this.app.vault.configDir}/plugins/${this.manifest.id}`;
@@ -560,7 +569,8 @@ export default class ObsidianNextcloudsync extends Plugin {
     this.statusBarEl = statusBarEl;
     // Read live on every use, so selecting another secret or rewriting its value applies from the next sync (docs/spec.md §15.2).
     const readAppPassword: AppPasswordReader = () => loadAppPassword(this.app, this.settings.passwordSecretId);
-    const webdavFactory = new WebDAVFactory(this.app, this.settings, readAppPassword, (m) => void this.logger.log(`net: ${m}`));
+    // [opencloud-fork] OpenCloud only; the factory extends upstream's WebDAVFactory so the engine takes it unchanged.
+    const webdavFactory = new OpenCloudFactory(this.app, this.settings, this.ocSpace.value, readAppPassword, (m) => void this.logger.log(`net: ${m}`));
 
     this.syncEngine = new SyncEngine({
       app: this.app,

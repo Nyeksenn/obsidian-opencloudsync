@@ -117,6 +117,22 @@ export class OpenCloudClient implements IWebDAVClient {
     return encodeRemoteUrl(this.baseUrl, toRemotePath(this.remoteBase, rel));
   }
 
+  // Vault-relative path of a listing href, or null when it lies outside this space. Upstream's hrefToRelative keeps an href
+  // that does not start with the base path as-is and relies on the sync-folder prefix to drop it; syncing into the space
+  // root has no such prefix, so an href elsewhere on the server would become a vault file. Hence the explicit check first.
+  private hrefToSyncPath(href: string): string | null {
+    let pathname: string;
+    let basePath: string;
+    try {
+      pathname = decodeURIComponent(new URL(href, this.baseUrl).pathname).replace(/\/+$/, '');
+      basePath = decodeURIComponent(new URL(this.baseUrl).pathname).replace(/\/+$/, '');
+    } catch {
+      return null;
+    }
+    if (pathname !== basePath && !pathname.startsWith(`${basePath}/`)) return null;
+    return hrefToRelative(this.baseUrl, this.remoteBase, href);
+  }
+
   // Read on every request so a changed token applies without a restart (docs/spec.md §15.2).
   private get authHeader(): string {
     const token = this.readAppPassword();
@@ -320,7 +336,7 @@ export class OpenCloudClient implements IWebDAVClient {
       const resp = responses[i];
       const prop = readProp(resp);
       if (!prop) continue;
-      const path = hrefToRelative(this.baseUrl, this.remoteBase, readHref(resp));
+      const path = this.hrefToSyncPath(readHref(resp));
       if (path === null) continue; // outside the sync root, or an unsafe path
       const { etag, size, lastModified } = readDavProps(prop);
       const { checksum, fileId } = readOpenCloudProps(prop);

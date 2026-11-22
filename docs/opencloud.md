@@ -118,7 +118,7 @@ Rules that keep this cheap:
 
 1. Don't edit upstream-owned code: `src/sync/**`, `src/data/**`, `src/util/**` (except `hash.ts`),
    `src/network/**`, `docs/spec.md`, `docs/plan.md`, and upstream's tests. Upstream's Nextcloud and plain-WebDAV clients
-   stay in the tree unused (tree-shaken out of `main.js`), so upstream fixes to them still merge.
+   stay in the tree, never constructed, so upstream fixes to them still merge. They are still bundled into `main.js` (`WebDAVFactory` and the settings tab import them), which costs bundle size, not behaviour.
 2. Fork code lives in new files: `src/opencloud/**`, `tests/a-no-nextcloud/opencloud/**`, `tests/opencloud-live/**`.
 3. The few edits to shared files are marked `[opencloud-fork]`.
 4. Files the fork owns completely (README, CHANGELOG, `manifest.json`, `versions.json`) resolve as "ours" via `.gitattributes`.

@@ -39,5 +39,5 @@ export function settingsFor(env: OcEnv, deviceId: string, over: Partial<DavSyncS
 }
 
 export function spaceFor(env: OcEnv, folder: string): OpenCloudSpaceSettings {
-  return { spaceId: env.spaceId, spaceName: env.spaceName, spaceWebDavUrl: env.spaceWebDavUrl, spaceFolder: folder };
+  return { spaceId: env.spaceId, spaceName: env.spaceName, spaceWebDavUrl: env.spaceWebDavUrl, spaceFolder: folder, chosenOnServer: '' };
 }

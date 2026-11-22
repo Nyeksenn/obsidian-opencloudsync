@@ -12,10 +12,15 @@ export interface OpenCloudSpaceSettings {
   spaceWebDavUrl: string;
   /** Optional folder inside the space to sync into ('' = the space root). Slash-separated, no leading/trailing slash. */
   spaceFolder: string;
+  /**
+   * The normalised Server URL the space was chosen on. The client talks to `spaceWebDavUrl`, not to the Server URL, so a
+   * changed Server URL would otherwise keep syncing with the old server; the factory refuses to sync while they differ.
+   */
+  chosenOnServer: string;
 }
 
 export const DEFAULT_SPACE_SETTINGS: OpenCloudSpaceSettings = {
-  spaceId: '', spaceName: '', spaceWebDavUrl: '', spaceFolder: '',
+  spaceId: '', spaceName: '', spaceWebDavUrl: '', spaceFolder: '', chosenOnServer: '',
 };
 
 export const FORK_SETTINGS_FILE = 'opencloud.json';
