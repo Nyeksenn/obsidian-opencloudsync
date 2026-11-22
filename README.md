@@ -141,4 +141,12 @@ that keep this fork mergeable with upstream.
 
 ## License
 
-MIT, as upstream. Original work © Daisuke ITO; see [`LICENSE`](LICENSE).
+MIT, as upstream; see [`LICENSE`](LICENSE). The original Nextcloud Sync plugin is the work of Daisuke ITO; the OpenCloud
+fork is by Clemens Albrecht.
+
+`main.js` also contains third-party code — reconcile-text (MIT, with Rust components under MIT), node-diff3 (MIT) and
+semver (ISC). Their license texts are in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and, as their licenses
+require, embedded at the top of `main.js` itself.
+
+This is an independent community project. It is not affiliated with or endorsed by the OpenCloud project, Nextcloud
+GmbH or Obsidian. "OpenCloud", "Nextcloud" and "Obsidian" are used only to name the software this plugin works with.

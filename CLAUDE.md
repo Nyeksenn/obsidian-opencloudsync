@@ -77,6 +77,10 @@ plain WebDAV and are not part of the fork's gate; they matter only when an upstr
 - `src/util/hash.ts` — `sha256()` hashes with a switchable digest (default SHA-256 for upstream's tests; the fork sets
   SHA-1 to match OpenCloud's checksums). State records keep the label `idType: 'sha256'`.
 - Upstream's `NextcloudClient`, `StandardWebDAVClient` and `LoginFlowV2` stay in the tree, never constructed.
+- Licensing: `esbuild.config.mjs` ([opencloud-fork]) embeds `LICENSE` and `THIRD_PARTY_NOTICES.md` as the leading
+  comment of `main.js`, because Obsidian installs `main.js` alone and the MIT/ISC licenses of the plugin and of the
+  bundled code (reconcile-text incl. its compiled Rust crates, node-diff3, semver) require the notices in every copy.
+  `thirdPartyNotices.test.ts` fails when the bundle gains a package without an entry: add its full license text then.
 
 ## Tests
 

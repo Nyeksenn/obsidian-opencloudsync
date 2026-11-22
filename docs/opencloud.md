@@ -125,6 +125,8 @@ Rules that keep this cheap:
    switch (`util/hash.ts`), and user-visible strings, so nothing the user sees says "Nextcloud": status bar, ribbon,
    notices, debug-log file name and header (`util/logPaths.ts`, `util/FileLogger.ts`), mass-delete reports
    (`ui/breakerReport.ts`), the 409 hint (`types.ts`) and the default Secret Storage name of the token.
+   The build (`esbuild.config.mjs`) embeds `LICENSE` and `THIRD_PARTY_NOTICES.md` into `main.js`; upstream shipped
+   `main.js` without the notices its MIT/ISC dependencies require.
 4. Merge policy (`.gitattributes`, needs `git config merge.ours.driver true` once per clone). "Ours" keeps the fork's
    file whenever both sides changed it, and **drops upstream's change to it silently**, so it is used only for files
    whose content is the fork's own:

@@ -15,6 +15,8 @@ Stable releases need an entry here (checked by `.githooks/pre-push`); pre-releas
 - Safety: a missing space, a space chosen on another server, and an href outside the space never reach the engine as
   an empty or foreign listing.
 - Live test layer against a local OpenCloud (`pnpm test:oc`, `compose.yml`).
+- `THIRD_PARTY_NOTICES.md` with the license texts of all code bundled into `main.js`; the build embeds it, together
+  with `LICENSE`, at the top of `main.js` (earlier builds shipped without these notices).
 
 ### Changed
 
